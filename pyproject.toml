@@ -1,0 +1,109 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "stollen"
+description = "An asynchronous framework to easily build a client-side API"
+readme = "README.rst"
+requires-python = ">=3.11"
+license = "MIT"
+authors = [
+    { name = "nullmatawasoradesu" },
+]
+maintainers = [
+    { name = "nullmatawasoradesu" },
+]
+keywords = [
+    "api",
+    "framework",
+    "wrapper",
+    "asyncio",
+    "client",
+]
+dependencies = [
+    "aiohttp~=3.9.0",
+    "certifi==2023.11.17",
+    "pydantic>=2.4.1,<2.6",
+]
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Development Status :: 2 - Pre-Alpha",
+    "Environment :: Console",
+    "Framework :: AsyncIO",
+    "Typing :: Typed",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+dynamic = ["version"]
+
+[tool.hatch.version]
+path = "stollen/__meta__.py"
+
+[project.optional-dependencies]
+dev = [
+    "black~=23.12.1",
+    "ruff~=0.1.11",
+    "mypy~=1.9.0",
+    "pre-commit~=3.6.0"
+]
+
+[project.urls]
+Repository = "https://github.com/wakaree/stollen"
+
+[tool.black]
+line-length = 99
+target-version = ['py311']
+exclude = '''
+(
+    \.eggs
+  | \.git
+  | \.tox
+  | \.?venv
+  | build
+  | dist
+)
+'''
+
+
+[tool.ruff]
+target-version = "py38"
+line-length = 99
+select = [
+    "C",
+    "DTZ",
+    "E",
+    "F",
+    "I",
+    "ICN",
+    "ISC",
+    "N",
+    "PLC",
+    "PLE",
+    "Q",
+    "S",
+    "T",
+    "W",
+    "YTT",
+    "RET",
+    "SIM",
+    "ASYNC",
+]
+exclude = [
+    ".git",
+    ".venv",
+    "venv",
+    "build",
+    "dist",
+    "docs",
+    "tests",
+    "dev",
+    "scripts",
+    "*.egg-info",
+]
+
+
+[tool.mypy]
+plugins = ["pydantic.mypy"]
+exclude = [".venv", ".idea"]
