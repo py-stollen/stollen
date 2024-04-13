@@ -14,7 +14,9 @@ if TYPE_CHECKING:
 
 
 class StollenMethod(
-    StollenContextController[StollenClientT], BaseModel, Generic[StollenT, StollenClientT]
+    StollenContextController[StollenClientT],
+    BaseModel,
+    Generic[StollenT, StollenClientT],
 ):
     http_method: ClassVar[HTTPMethodType]
     api_method: ClassVar[str]
