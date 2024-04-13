@@ -85,7 +85,9 @@ class BaseSession(ABC):
     ) -> str:
         if not client.use_method_placeholders:
             return method.api_method
-        return method.api_method.format(**{key: payload.pop(key) for key in payload.copy()})
+        return method.api_method.format(
+            **{key: payload.pop(key) for key in payload if f"{{{key}}}" in method.api_method}
+        )
 
     def _apply_access_nodes(
         self,

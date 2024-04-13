@@ -70,7 +70,7 @@ exclude = '''
 [tool.ruff]
 target-version = "py38"
 line-length = 99
-select = [
+lint.select = [
     "C",
     "DTZ",
     "E",
