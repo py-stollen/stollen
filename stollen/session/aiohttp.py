@@ -42,14 +42,14 @@ class AiohttpSession(BaseSession):
     def resolve_request_kwargs(
         self, method: HTTPMethodType, payload: dict[str, Any]
     ) -> dict[str, Any]:
-        if method == HTTPMethod.GET:
+        if method in [HTTPMethod.GET, HTTPMethod.HEAD, HTTPMethod.OPTIONS, HTTPMethod.TRACE]:
             return {
-                "params": dict(
-                    (k, self.json_dumps(v)) if not isinstance(v, str) else (k, v)
+                "params": {
+                    k: self.json_dumps(v) if not isinstance(v, str) else v
                     for k, v in payload.items()
-                )
+                }
             }
-        if method == HTTPMethod.POST:
+        if method in [HTTPMethod.POST, HTTPMethod.PUT, HTTPMethod.PATCH, HTTPMethod.DELETE]:
             return {"json": payload}
         raise TypeError(f"Got an unexpected method type: {method}")
 
