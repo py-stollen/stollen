@@ -20,10 +20,10 @@ class Coingecko(Stollen):
     def __init__(self) -> None:
         super().__init__(
             base_url="https://api.coingecko.com/api/v3",
-            use_method_placeholders=True,
             error_message_key=["status", "error_message"],
             general_error_class=CoingeckoAPIError,
             error_codes={429: RateLimitError},
+            stringify_detailed_errors=False,
         )
 
     async def ping(self) -> GeckoSays:
@@ -45,7 +45,7 @@ class Ping(
 
 
 async def main() -> None:
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.DEBUG)
     async with Coingecko() as coingecko:
         gecko_says: GeckoSays = await coingecko.ping()
         logging.info(gecko_says)

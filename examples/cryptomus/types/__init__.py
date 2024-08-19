@@ -1,4 +1,3 @@
-from .balance import Balance
-from .balance_unit import BalanceUnit
+from .balance import Balance, BalanceResponse, BalanceUnit
 
-__all__ = ["Balance", "BalanceUnit"]
+__all__ = ["Balance", "BalanceResponse", "BalanceUnit"]
