@@ -3,13 +3,13 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Final
 
 from stollen import Stollen
-from stollen.client.api_access import Header
+from stollen.requests.fields import Header
 
 from .exceptions import CryptomusError, InvalidMerchantUUIDError
 from .signature_factory import SignatureFactory
 
 if TYPE_CHECKING:
-    from .types import Balance
+    from .types import BalanceResponse
 
 
 class Cryptomus(Stollen):
@@ -21,7 +21,7 @@ class Cryptomus(Stollen):
         self._api_key = api_key
         super().__init__(
             base_url="https://api.cryptomus.com/v1",
-            api_access_nodes=[Header(name="merchant", value=merchant), SignatureFactory()],
+            global_request_fields=[Header(name="merchant", value=merchant), SignatureFactory()],
             response_data_key=["result"],
             error_message_key=["message"],
             general_error_class=CryptomusError,
@@ -37,7 +37,7 @@ class Cryptomus(Stollen):
     def api_key(self) -> str:
         return self._api_key
 
-    async def get_balance(self) -> list[Balance]:
+    async def get_balance(self) -> list[BalanceResponse]:
         from .methods import GetBalance
 
         call: GetBalance = GetBalance()

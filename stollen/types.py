@@ -1,5 +1,7 @@
 from typing import Any, Callable, Literal, TypeAlias, TypeVar
 
+StollenT = TypeVar("StollenT", bound=Any)
+
 JsonLoads: TypeAlias = Callable[..., Any]
 JsonDumps: TypeAlias = Callable[..., str]
 
@@ -13,5 +15,3 @@ HTTPMethodType: TypeAlias = Literal[
     "PUT",
     "TRACE",
 ]
-
-StollenT = TypeVar("StollenT", bound=Any)

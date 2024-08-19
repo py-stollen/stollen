@@ -1,4 +1,4 @@
-from .access_node_type import AccessNodeType
 from .http_method import HTTPMethod
+from .request_field_type import RequestFieldType
 
-__all__ = ["AccessNodeType", "HTTPMethod"]
+__all__ = ["HTTPMethod", "RequestFieldType"]

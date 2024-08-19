@@ -20,8 +20,9 @@ class Invoice(StollenObject[Cryptopay]):
     paid_fiat_rate: Optional[str] = None
     accepted_assets: Optional[list[str]] = None
     fee_asset: Optional[str] = None
-    fee_amount: Optional[float]
+    fee_amount: Optional[float] = None
     bot_invoice_url: str
+    pay_url: str
     description: Optional[str] = None
     status: str
     created_at: datetime
@@ -31,9 +32,11 @@ class Invoice(StollenObject[Cryptopay]):
     allow_anonymous: bool
     expiration_date: Optional[datetime] = None
     paid_at: Optional[datetime] = None
-    paid_anonymously: bool
+    paid_anonymously: Optional[bool] = None
     comment: Optional[str] = None
     hidden_message: Optional[str] = None
     payload: Optional[str] = None
     paid_btn_name: Optional[str] = None
     paid_btn_url: Optional[str] = None
+    mini_app_invoice_url: str
+    web_app_invoice_url: str

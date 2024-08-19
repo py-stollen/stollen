@@ -3,31 +3,32 @@ from __future__ import annotations
 import json
 from abc import ABC, abstractmethod
 from types import TracebackType
-from typing import TYPE_CHECKING, Any, Iterable, Optional, Self
+from typing import TYPE_CHECKING, Any, Iterable, Optional, Self, cast
 
-from pydantic import TypeAdapter
+from pydantic import TypeAdapter, ValidationError
 
-from ..client.api_access import APIAccessNode, BaseAPIAccessNodeFactory
-from ..enums import AccessNodeType
-from ..exceptions import StollenAPIError
+from .. import loggers
+from ..enums import RequestFieldType
+from ..exceptions import DetailedStollenAPIError, StollenError
+from ..requests.fields import RequestField
+from ..requests.types import StollenRequest, StollenResponse
 from ..utils.mapping import recursive_getitem
 
 if TYPE_CHECKING:
     from ..client import Stollen, StollenClientT
     from ..method import StollenMethod
-    from ..types import HTTPMethodType, JsonDumps, JsonLoads, StollenT
+    from ..requests.factory import RequestFieldFactory
+    from ..types import JsonDumps, JsonLoads, StollenT
 
 
 class BaseSession(ABC):
     """
     This is base class for HTTP sessions of your stollen client
-
     If you want to create your own session, you must inherit from this class.
     """
 
     json_loads: JsonLoads
     json_dumps: JsonDumps
-    use_dump_aliases: bool
     exclude_none_in_methods: bool
 
     def __init__(
@@ -35,23 +36,18 @@ class BaseSession(ABC):
         *,
         json_loads: JsonLoads = json.loads,
         json_dumps: JsonDumps = json.dumps,
-        use_dump_aliases: bool = True,
         exclude_none_in_methods: bool = True,
     ) -> None:
         self.json_loads = json_loads
         self.json_dumps = json_dumps
-        self.use_dump_aliases = use_dump_aliases
         self.exclude_none_in_methods = exclude_none_in_methods
 
     @abstractmethod
     async def make_request(
         self,
-        client: Stollen,
-        method: HTTPMethodType,
-        url: str,
-        headers: dict[str, Any],
-        payload: dict[str, Any],
-    ) -> dict[str, Any]:
+        client: StollenClientT,
+        request: StollenRequest,
+    ) -> tuple[StollenResponse, Any]:
         pass
 
     @abstractmethod
@@ -62,29 +58,44 @@ class BaseSession(ABC):
         pass
 
     @classmethod
-    def prepare_response(cls, client: Stollen, response_data: Any, status: int) -> Any:
-        if status in client.error_codes or status > 400:
-            exception_type: type[StollenAPIError] = client.error_codes.get(
-                status, client.general_error_class
+    def prepare_response(
+        cls,
+        client: Stollen,
+        request: StollenRequest,
+        response: StollenResponse,
+    ) -> Any:
+        try:
+            if response.status_code not in client.error_codes and response.status_code < 400:
+                return recursive_getitem(mapping=response.body, keys=client.response_data_key)
+            exception_type: type[StollenError] = client.error_codes.get(
+                response.status_code,
+                client.general_error_class,
             )
             raise exception_type(
                 message=str(
-                    recursive_getitem(mapping=response_data, keys=client.error_message_key)
+                    recursive_getitem(
+                        mapping=response.body,
+                        keys=client.error_message_key,
+                    )
                 ),
-                code=status,
-                raw_response=response_data,
+                request=request,
+                response=response,
+                stringify=client.stringify_detailed_errors,
             )
-        return recursive_getitem(mapping=response_data, keys=client.response_data_key)
+        except KeyError:
+            raise DetailedStollenAPIError(
+                message="An error has occurred and stollen can't parse the response.",
+                request=request,
+                response=response,
+                stringify=client.stringify_detailed_errors,
+            )
 
     @classmethod
     def format_method(
         cls,
-        client: Stollen,
         method: StollenMethod[StollenT, StollenClientT],
         payload: dict[str, Any],
     ) -> str:
-        if not client.use_method_placeholders:
-            return method.api_method
         return method.api_method.format(
             **{
                 key: payload.pop(key)
@@ -93,59 +104,119 @@ class BaseSession(ABC):
             }
         )
 
-    def _apply_access_nodes(
+    def _prepare_payload(
         self,
-        nodes: Iterable[BaseAPIAccessNodeFactory | APIAccessNode],
-        headers: dict[str, Any],
-        placeholders: dict[str, Any],
         client: Stollen,
         method: StollenMethod[StollenT, StollenClientT],
-    ) -> None:
-        for node in nodes:
-            if isinstance(node, BaseAPIAccessNodeFactory):
-                self._apply_access_nodes(
-                    nodes=node.construct(client=client, method=method),  # type: ignore
-                    headers=headers,
-                    placeholders=placeholders,
-                    client=client,
-                    method=method,
-                )
-            elif node.type == AccessNodeType.HEADER:
-                headers[node.name] = node.value
-            elif node.type == AccessNodeType.URL_PLACEHOLDER:
-                placeholders[node.name] = node.value
-
-    def apply_access_nodes(
-        self, url: str, client: Stollen, method: StollenMethod[StollenT, StollenClientT]
-    ) -> tuple[str, dict[str, Any]]:
-        if not client.api_access_nodes:
-            return url, {}
-        headers: dict[str, Any] = {}
-        placeholders: dict[str, Any] = {}
-        self._apply_access_nodes(
-            nodes=client.api_access_nodes,
-            headers=headers,
-            placeholders=placeholders,
-            client=client,
-            method=method,
+    ) -> dict[str, dict[str, Any]]:
+        default_field_type: str = (
+            method.default_field_type
+            if method.default_field_type != RequestFieldType.AUTO
+            else RequestFieldType.resolve(http_method=method.http_method)
         )
-        return url.format(**placeholders), headers
+
+        payload: dict[str, dict[str, Any]] = {
+            RequestFieldType.BODY: {},
+            RequestFieldType.QUERY: {},
+            RequestFieldType.HEADER: {},
+            RequestFieldType.PLACEHOLDER: {},
+        }
+
+        for g_field in client.global_request_fields:
+            if callable(g_field):
+                g_field = g_field(client, method)  # type: ignore[assignment, arg-type]
+            if isinstance(g_field, Iterable):
+                for _g_field in g_field:
+                    payload[_g_field.type][_g_field.name] = _g_field.value
+                continue
+            g_field = cast(RequestField, g_field)
+            payload[g_field.type][g_field.name] = g_field.value
+
+        for name, field in method.model_fields.items():
+            field_value = getattr(method, name)
+            if field_value is None:
+                field_factory: Optional[RequestFieldFactory] = (
+                    field.json_schema_extra.get("field_factory")
+                    if isinstance(field.json_schema_extra, dict)
+                    else None
+                )
+                if field_factory is not None:
+                    field_value = field_factory(client, method)  # type: ignore[arg-type]
+                if field_value is None and self.exclude_none_in_methods:
+                    continue
+            field_type = (
+                field.json_schema_extra.get("field_type", default_field_type)
+                if isinstance(field.json_schema_extra, dict)
+                else default_field_type
+            )
+            fields = payload.setdefault(field_type, {})
+            fields[field.serialization_alias or name] = (
+                field_value
+                if field_type != RequestFieldType.QUERY
+                else self.json_dumps(field_value)
+            )
+
+        return payload
+
+    def to_request(
+        self,
+        client: Stollen,
+        method: StollenMethod[StollenT, StollenClientT],
+    ) -> StollenRequest:
+        payload: dict[str, dict[str, Any]] = self._prepare_payload(client=client, method=method)
+
+        raw_url: str = client.base_url
+        if "{subdomain}" in raw_url:
+            subdomain: Optional[str] = method.subdomain or client.default_subdomain
+            if subdomain is None:
+                raise ValueError("Request subdomain is not specified!")
+            raw_url = raw_url.format(subdomain=subdomain)
+
+        api_method: str = self.format_method(
+            method=method,
+            payload={key: value for data in payload.values() for key, value in data.items()},
+        )
+        raw_url = f"{raw_url}/{api_method.removeprefix('/')}"
+
+        return StollenRequest(
+            url=raw_url.format(**payload.pop(RequestFieldType.PLACEHOLDER, {})),
+            method=method.http_method,
+            headers=payload.pop(RequestFieldType.HEADER),
+            query=payload.pop(RequestFieldType.QUERY),
+            body=payload.pop(RequestFieldType.BODY),
+        )
 
     async def __call__(
-        self, client: Stollen, method: StollenMethod[StollenT, StollenClientT]
+        self,
+        client: Stollen,
+        method: StollenMethod[StollenT, StollenClientT],
     ) -> StollenT:
-        payload: dict[str, Any] = method.model_dump(
-            by_alias=self.use_dump_aliases, exclude_none=self.exclude_none_in_methods
+        request: StollenRequest = self.to_request(client=client, method=method)
+        loggers.client.debug(
+            "Making %s request to the endpoint %s",
+            request.method,
+            request.url,
         )
-
-        api_method: str = self.format_method(client=client, method=method, payload=payload)
-        raw_url: str = f"{client.base_url}/{api_method.removeprefix('/')}"
-        url, headers = self.apply_access_nodes(url=raw_url, client=client, method=method)
-        raw_response: Any = await self.make_request(
-            client=client, method=method.http_method, url=url, headers=headers, payload=payload
+        response, data = await self.make_request(
+            client=client,
+            request=request,
+        )
+        loggers.client.debug(
+            "%s request to the endpoint %s has been made with status code %d",
+            request.method,
+            request.url,
+            response.status_code,
         )
         adapter: TypeAdapter[StollenT] = method.type_adapter
-        return adapter.validate_python(raw_response, context={"client": client})
+        try:
+            return adapter.validate_python(data, context={"client": client})
+        except ValidationError as error:
+            raise DetailedStollenAPIError(
+                message="An error has occurred while validating the response.",
+                request=request,
+                response=response,
+                stringify=client.stringify_detailed_errors,
+            ) from error
 
     async def __aenter__(self) -> Self:
         return self

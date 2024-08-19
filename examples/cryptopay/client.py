@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Optional
 
 from stollen import Stollen
-from stollen.client.api_access import Header
+from stollen.requests.fields import Header
 
 from .exceptions import CryptopayError, UnauthorizedError
 
@@ -16,7 +16,7 @@ class Cryptopay(Stollen):
         host: str = "pay.crypt.bot" if production else "testnet-pay.crypt.bot"
         super().__init__(
             base_url=f"https://{host}/api",
-            api_access_nodes=[
+            global_request_fields=[
                 Header(name="Host", value=host),
                 Header(name="Crypto-Pay-API-Token", value=api_token),
             ],

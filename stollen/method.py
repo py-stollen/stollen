@@ -4,9 +4,9 @@ from typing import TYPE_CHECKING, Any, ClassVar, Generator, Generic, Optional
 
 from pydantic import BaseModel, TypeAdapter
 
-from . import Stollen
 from .client import StollenClientT
 from .client.context_controller import StollenContextController
+from .enums import HTTPMethod, RequestFieldType
 from .types import StollenT
 
 if TYPE_CHECKING:
@@ -18,12 +18,14 @@ class StollenMethod(
     BaseModel,
     Generic[StollenT, StollenClientT],
 ):
-    http_method: ClassVar[HTTPMethodType]
+    subdomain: ClassVar[Optional[str]]
+    http_method: ClassVar[HTTPMethod | HTTPMethodType]
     api_method: ClassVar[str]
     returning: ClassVar[type[Any]]
+    default_field_type: ClassVar[RequestFieldType]
     type_adapter: ClassVar[TypeAdapter[Any]]
 
-    async def emit(self, client: Stollen) -> StollenT:
+    async def emit(self, client: StollenClientT) -> StollenT:
         return await client(self)
 
     def __await__(self) -> Generator[Any, None, StollenT]:
@@ -38,17 +40,32 @@ class StollenMethod(
         return self.emit(client).__await__()
 
     @classmethod
-    def __validate_class_var(cls, name: str, kwargs: dict[str, Any]) -> None:
-        var: Optional[Any] = kwargs.pop(name, None)
-        if var is None:
+    def __validate_class_var(
+        cls,
+        name: str,
+        kwargs: dict[str, Any],
+        default: Optional[Any] = None,
+        required: bool = True,
+    ) -> None:
+        var: Optional[Any] = kwargs.pop(name, default)
+        if default is None and hasattr(cls, name):
+            return
+        if required and var is None:
             raise TypeError(f"Missing `{name}` parameter while declaring `{cls.__name__}` method!")
         setattr(cls, name, var)
 
-    def __init_subclass__(cls, **kwargs: Any) -> None:
+    # noinspection PyMethodOverriding
+    def __init_subclass__(cls, **kwargs: Any) -> None:  # type: ignore
         # Prevent class var validation for the Generic class
         if not getattr(cls, "__parameters__", None):
+            cls.__validate_class_var(name="subdomain", kwargs=kwargs, required=False)
             cls.__validate_class_var(name="http_method", kwargs=kwargs)
             cls.__validate_class_var(name="api_method", kwargs=kwargs)
             cls.__validate_class_var(name="returning", kwargs=kwargs)
+            cls.__validate_class_var(
+                name="default_field_type",
+                kwargs=kwargs,
+                default=RequestFieldType.AUTO,
+            )
             cls.type_adapter = TypeAdapter[StollenT](cls.returning)
         super().__init_subclass__(**kwargs)
