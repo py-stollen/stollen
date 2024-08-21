@@ -22,6 +22,7 @@ class StollenMethod(
     http_method: ClassVar[HTTPMethod | HTTPMethodType]
     api_method: ClassVar[str]
     returning: ClassVar[type[Any]]
+    response_data_key: ClassVar[list[str]]
     default_field_type: ClassVar[RequestFieldType]
     type_adapter: ClassVar[TypeAdapter[Any]]
 
@@ -51,7 +52,8 @@ class StollenMethod(
         if default is None and hasattr(cls, name):
             return
         if required and var is None:
-            raise TypeError(f"Missing `{name}` parameter while declaring `{cls.__name__}` method!")
+            msg: str = f"Missing `{name}` parameter while declaring `{cls.__name__}` method!"
+            raise TypeError(msg)
         setattr(cls, name, var)
 
     # noinspection PyMethodOverriding
@@ -62,6 +64,7 @@ class StollenMethod(
             cls.__validate_class_var(name="http_method", kwargs=kwargs)
             cls.__validate_class_var(name="api_method", kwargs=kwargs)
             cls.__validate_class_var(name="returning", kwargs=kwargs)
+            cls.__validate_class_var(name="response_data_key", kwargs=kwargs, default=[])
             cls.__validate_class_var(
                 name="default_field_type",
                 kwargs=kwargs,

@@ -66,7 +66,12 @@ class BaseSession(ABC):
     ) -> Any:
         try:
             if response.status_code not in client.error_codes and response.status_code < 400:
-                return recursive_getitem(mapping=response.body, keys=client.response_data_key)
+                response_data_key: list[str] = client.response_data_key.copy()
+                response_data_key.extend(request.response_data_key)
+                return recursive_getitem(
+                    mapping=response.body,
+                    keys=response_data_key,
+                )
             exception_type: type[StollenError] = (
                 client.error_codes.get(
                     response.status_code,
@@ -189,7 +194,8 @@ class BaseSession(ABC):
 
         return StollenRequest(
             url=raw_url.format(**payload.pop(RequestFieldType.PLACEHOLDER, {})),
-            method=method.http_method,
+            http_method=method.http_method,
+            response_data_key=method.response_data_key,
             headers=payload.pop(RequestFieldType.HEADER),
             query=payload.pop(RequestFieldType.QUERY),
             body=payload.pop(RequestFieldType.BODY),
@@ -203,7 +209,7 @@ class BaseSession(ABC):
         request: StollenRequest = self.to_request(client=client, method=method)
         loggers.client.debug(
             "Making %s request to the endpoint %s",
-            request.method,
+            request.http_method,
             request.url,
         )
         response, data = await self.make_request(
@@ -212,7 +218,7 @@ class BaseSession(ABC):
         )
         loggers.client.debug(
             "%s request to the endpoint %s has been made with status code %d",
-            request.method,
+            request.http_method,
             request.url,
             response.status_code,
         )

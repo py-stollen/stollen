@@ -19,8 +19,8 @@ class Stollen:
     base_url: str
     default_subdomain: Optional[str]
     global_request_fields: Iterable[RequestField | RequestFieldFactory]
-    response_data_key: Optional[Iterable[str]]
-    error_message_key: Optional[Iterable[str]]
+    response_data_key: list[str]
+    error_message_key: list[str]
     general_error_class: type[StollenError]
     error_codes: dict[int, type[StollenError]]
     force_detailed_errors: bool
@@ -33,8 +33,8 @@ class Stollen:
         base_url: str,
         default_subdomain: Optional[str] = None,
         global_request_fields: Optional[Iterable[RequestField | RequestFieldFactory]] = None,
-        response_data_key: Optional[Iterable[str]] = None,
-        error_message_key: Optional[Iterable[str]] = None,
+        response_data_key: Optional[list[str]] = None,
+        error_message_key: Optional[list[str]] = None,
         general_error_class: type[StollenError] = StollenAPIError,
         error_codes: Optional[dict[int, type[StollenError]]] = None,
         force_detailed_errors: bool = False,
@@ -46,8 +46,8 @@ class Stollen:
         self.base_url = base_url
         self.default_subdomain = default_subdomain
         self.global_request_fields = global_request_fields or []
-        self.response_data_key = response_data_key
-        self.error_message_key = error_message_key
+        self.response_data_key = response_data_key or []
+        self.error_message_key = error_message_key or []
         self.general_error_class = general_error_class
         self.error_codes = error_codes or {}
         self.force_detailed_errors = force_detailed_errors

@@ -60,7 +60,7 @@ class AiohttpSession(BaseSession):
     ) -> tuple[StollenResponse, Any]:
         session: ClientSession = await self.get_session()
         response: ClientResponse = await session.request(
-            method=request.method,
+            method=request.http_method,
             url=request.url,
             headers=request.headers,
             params=request.query,

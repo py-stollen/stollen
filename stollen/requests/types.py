@@ -5,7 +5,8 @@ from pydantic import BaseModel, ConfigDict, Field
 
 class StollenRequest(BaseModel):
     url: str
-    method: str
+    http_method: str
+    response_data_key: list[str]
     headers: dict[str, Any] = Field(default_factory=dict)
     query: dict[str, str] = Field(default_factory=dict)
     body: Optional[Any] = None
