@@ -67,9 +67,13 @@ class BaseSession(ABC):
         try:
             if response.status_code not in client.error_codes and response.status_code < 400:
                 return recursive_getitem(mapping=response.body, keys=client.response_data_key)
-            exception_type: type[StollenError] = client.error_codes.get(
-                response.status_code,
-                client.general_error_class,
+            exception_type: type[StollenError] = (
+                client.error_codes.get(
+                    response.status_code,
+                    client.general_error_class,
+                )
+                if not client.force_detailed_errors
+                else DetailedStollenAPIError
             )
             raise exception_type(
                 message=str(
@@ -137,7 +141,7 @@ class BaseSession(ABC):
             field_value = dump.get(name)
             if field_value is None:
                 field_factory: Optional[RequestFieldFactory] = (
-                    field.json_schema_extra.get("field_factory")
+                    field.json_schema_extra.get("field_factory")  # type: ignore[assignment]
                     if isinstance(field.json_schema_extra, dict)
                     else None
                 )
@@ -145,10 +149,13 @@ class BaseSession(ABC):
                     field_value = field_factory(client, method)  # type: ignore[arg-type]
                 if field_value is None and self.exclude_none_in_methods:
                     continue
-            field_type = (
-                field.json_schema_extra.get("field_type", default_field_type)
-                if isinstance(field.json_schema_extra, dict)
-                else default_field_type
+            field_type = cast(
+                str,
+                (
+                    field.json_schema_extra.get("field_type", default_field_type)
+                    if isinstance(field.json_schema_extra, dict)
+                    else default_field_type
+                ),
             )
             fields = payload.setdefault(field_type, {})
             fields[field.serialization_alias or name] = (

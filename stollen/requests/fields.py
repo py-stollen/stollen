@@ -45,8 +45,9 @@ def request_field(
 ) -> Any:  # noqa: N802
     if field_factory is not None:
         pydantic_kwargs.update(default=None)
+    data: dict[str, Any] = {"field_type": field_type, "field_factory": field_factory}
     return Field(
-        json_schema_extra={"field_type": field_type, "field_factory": field_factory},
+        json_schema_extra=data,
         **pydantic_kwargs,
     )  # type: ignore[pydantic-field]
 

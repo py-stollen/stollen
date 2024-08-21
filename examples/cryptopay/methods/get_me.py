@@ -7,7 +7,7 @@ from ..types import Profile
 
 class GetMe(
     StollenMethod[Profile, Cryptopay],
-    http_method=HTTPMethod.POST,
+    http_method=HTTPMethod.GET,
     api_method="/getMe",
     returning=Profile,
 ):
