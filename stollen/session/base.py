@@ -158,11 +158,12 @@ class BaseSession(ABC):
                 ),
             )
             fields = payload.setdefault(field_type, {})
-            fields[field.serialization_alias or name] = (
-                field_value
-                if field_type != RequestFieldType.QUERY
-                else self.json_dumps(field_value)
-            )
+            if field_type == RequestFieldType.QUERY and not isinstance(
+                field_value,
+                (str, int, float),
+            ):
+                field_value = self.json_dumps(field_value)
+            fields[field.serialization_alias or name] = field_value
 
         return payload
 
