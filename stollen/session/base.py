@@ -132,8 +132,9 @@ class BaseSession(ABC):
             g_field = cast(RequestField, g_field)
             payload[g_field.type][g_field.name] = g_field.value
 
+        dump: dict[str, Any] = method.model_dump()
         for name, field in method.model_fields.items():
-            field_value = getattr(method, name)
+            field_value = dump.get(name)
             if field_value is None:
                 field_factory: Optional[RequestFieldFactory] = (
                     field.json_schema_extra.get("field_factory")
