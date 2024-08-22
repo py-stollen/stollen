@@ -181,9 +181,9 @@ class BaseSession(ABC):
 
         raw_url: str = client.base_url
         if "{subdomain}" in raw_url:
-            subdomain: Optional[str] = method.subdomain or client.default_subdomain
+            subdomain: Optional[str] = client.stollen_get_subdomain(method=method)
             if subdomain is None:
-                raise ValueError("Request subdomain is not specified!")
+                raise ValueError("Request subdomain is missing!")
             raw_url = raw_url.format(subdomain=subdomain)
 
         api_method: str = self.format_method(

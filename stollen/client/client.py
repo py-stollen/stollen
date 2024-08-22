@@ -53,6 +53,12 @@ class Stollen:
         self.force_detailed_errors = force_detailed_errors
         self.stringify_detailed_errors = stringify_detailed_errors
 
+    def stollen_get_subdomain(
+        self,
+        method: StollenMethod[StollenT, StollenClientT],
+    ) -> Optional[str]:
+        return method.subdomain or self.default_subdomain
+
     async def __call__(self, method: StollenMethod[StollenT, StollenClientT]) -> StollenT:
         return await self.session(client=self, method=method)
 
