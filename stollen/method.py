@@ -25,6 +25,7 @@ class StollenMethod(
     response_data_key: ClassVar[list[str]]
     default_field_type: ClassVar[RequestFieldType]
     type_adapter: ClassVar[TypeAdapter[Any]]
+    __abstract: ClassVar[bool] = False
 
     async def emit(self, client: StollenClientT) -> StollenT:
         return await client(self)
@@ -49,7 +50,7 @@ class StollenMethod(
         required: bool = True,
     ) -> None:
         var: Optional[Any] = kwargs.pop(name, default)
-        if default is None and hasattr(cls, name):
+        if var is None and getattr(cls, name, None):
             return
         if required and var is None:
             msg: str = f"Missing `{name}` parameter while declaring `{cls.__name__}` method!"
@@ -59,16 +60,23 @@ class StollenMethod(
     # noinspection PyMethodOverriding
     def __init_subclass__(cls, **kwargs: Any) -> None:  # type: ignore
         # Prevent class var validation for the Generic class
+        cls.__abstract = kwargs.pop("abstract", None) or getattr(cls, "__abstract", False)
+        mro: list[type[Any]] = list(cls.__mro__)
+        parent: type[Any] = mro[mro.index(cls) + 1]
+        if cls.__name__.startswith(f"{parent.__name__}[") and issubclass(parent, StollenMethod):
+            cls.__abstract = parent.__abstract
         if not getattr(cls, "__parameters__", None):
+            var_required: bool = not cls.__abstract
             cls.__validate_class_var(name="subdomain", kwargs=kwargs, required=False)
-            cls.__validate_class_var(name="http_method", kwargs=kwargs)
-            cls.__validate_class_var(name="api_method", kwargs=kwargs)
-            cls.__validate_class_var(name="returning", kwargs=kwargs)
+            cls.__validate_class_var(name="http_method", kwargs=kwargs, required=var_required)
+            cls.__validate_class_var(name="api_method", kwargs=kwargs, required=var_required)
+            cls.__validate_class_var(name="returning", kwargs=kwargs, required=var_required)
             cls.__validate_class_var(name="response_data_key", kwargs=kwargs, default=[])
             cls.__validate_class_var(
                 name="default_field_type",
                 kwargs=kwargs,
                 default=RequestFieldType.AUTO,
             )
-            cls.type_adapter = TypeAdapter[StollenT](cls.returning)
+            if getattr(cls, "returning", None):
+                cls.type_adapter = TypeAdapter[StollenT](cls.returning)
         super().__init_subclass__(**kwargs)
