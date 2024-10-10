@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from enum import StrEnum, auto
+from enum import Enum, auto
 
 from .http_method import HTTPMethod
 
 
-class RequestFieldType(StrEnum):
+class RequestFieldType(str, Enum):
     AUTO = auto()
     BODY = auto()
     QUERY = auto()

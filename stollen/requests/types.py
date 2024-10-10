@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Any, Optional, Union
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -8,7 +8,7 @@ class StollenRequest(BaseModel):
     http_method: str
     response_data_key: list[str]
     headers: dict[str, Any] = Field(default_factory=dict)
-    query: dict[str, str | int | float] = Field(default_factory=dict)
+    query: dict[str, Union[str, int, float]] = Field(default_factory=dict)
     body: Optional[Any] = None
 
     model_config = ConfigDict(arbitrary_types_allowed=True)

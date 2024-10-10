@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from types import TracebackType
-from typing import TYPE_CHECKING, Iterable, Optional, Self, TypeVar
+from typing import TYPE_CHECKING, Iterable, Optional, TypeVar, Union
+
+from typing_extensions import Self
 
 from ..exceptions import StollenAPIError, StollenError
 from ..session.aiohttp import AiohttpSession
@@ -18,7 +20,7 @@ class Stollen:
     session: BaseSession
     base_url: str
     default_subdomain: Optional[str]
-    global_request_fields: Iterable[RequestField | RequestFieldFactory]
+    global_request_fields: Iterable[Union[RequestField, RequestFieldFactory]]
     response_data_key: list[str]
     error_message_key: list[str]
     general_error_class: type[StollenError]
@@ -32,7 +34,7 @@ class Stollen:
         session: Optional[BaseSession] = None,
         base_url: str,
         default_subdomain: Optional[str] = None,
-        global_request_fields: Optional[Iterable[RequestField | RequestFieldFactory]] = None,
+        global_request_fields: Optional[Iterable[Union[RequestField, RequestFieldFactory]]] = None,
         response_data_key: Optional[list[str]] = None,
         error_message_key: Optional[list[str]] = None,
         general_error_class: type[StollenError] = StollenAPIError,

@@ -7,8 +7,8 @@ from typing import TYPE_CHECKING, Any, Optional
 import certifi
 from aiohttp import ClientResponse, ClientSession, TCPConnector, hdrs
 
-from .base import BaseSession
 from ..requests.types import StollenRequest, StollenResponse
+from .base import BaseSession
 
 if TYPE_CHECKING:
     from ..client import StollenClientT
@@ -60,10 +60,14 @@ class AiohttpSession(BaseSession):
     ) -> tuple[StollenResponse, Any]:
         session: ClientSession = await self.get_session()
         body_kwargs: dict[str, Any] = (
-            {"data": request.body}
-            if not isinstance(request.body, dict) else
-            {"json": request.body}
-        ) if request.body else {}
+            (
+                {"data": request.body}
+                if not isinstance(request.body, dict)
+                else {"json": request.body}
+            )
+            if request.body
+            else {}
+        )
         response: ClientResponse = await session.request(
             method=request.http_method,
             url=request.url,

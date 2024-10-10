@@ -1,4 +1,6 @@
-from typing import Any, Callable, Literal, TypeAlias, TypeVar
+from typing import Any, Callable, Literal, TypeVar
+
+from typing_extensions import TypeAlias
 
 StollenT = TypeVar("StollenT", bound=Any)
 

@@ -3,9 +3,10 @@ from __future__ import annotations
 import json
 from abc import ABC, abstractmethod
 from types import TracebackType
-from typing import TYPE_CHECKING, Any, Iterable, Optional, Self, cast
+from typing import TYPE_CHECKING, Any, Iterable, Optional, cast
 
 from pydantic import TypeAdapter, ValidationError
+from typing_extensions import Self
 
 from .. import loggers
 from ..enums import RequestFieldType
