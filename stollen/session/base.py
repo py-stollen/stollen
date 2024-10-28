@@ -5,7 +5,7 @@ from abc import ABC, abstractmethod
 from types import TracebackType
 from typing import TYPE_CHECKING, Any, Iterable, Optional, cast
 
-from pydantic import TypeAdapter, ValidationError
+from pydantic import RootModel, TypeAdapter, ValidationError
 from typing_extensions import Self
 
 from .. import loggers
@@ -114,34 +114,13 @@ class BaseSession(ABC):
             }
         )
 
-    def _prepare_payload(
+    def _prepare_method_fields(
         self,
         client: Stollen,
         method: StollenMethod[StollenT, StollenClientT],
-    ) -> dict[str, dict[str, Any]]:
-        default_field_type: str = (
-            method.default_field_type
-            if method.default_field_type != RequestFieldType.AUTO
-            else RequestFieldType.resolve(http_method=method.http_method)
-        )
-
-        payload: dict[str, dict[str, Any]] = {
-            RequestFieldType.BODY: {},
-            RequestFieldType.QUERY: {},
-            RequestFieldType.HEADER: {},
-            RequestFieldType.PLACEHOLDER: {},
-        }
-
-        for g_field in client.global_request_fields:
-            if callable(g_field):
-                g_field = g_field(client, method)  # type: ignore[assignment, arg-type]
-            if isinstance(g_field, Iterable):
-                for _g_field in g_field:
-                    payload[_g_field.type][_g_field.name] = _g_field.value
-                continue
-            g_field = cast(RequestField, g_field)
-            payload[g_field.type][g_field.name] = g_field.value
-
+        default_field_type: str,
+        payload: dict[str, dict[str, Any]],
+    ) -> dict[str, Any]:
         dump: dict[str, Any] = method.model_dump()
         for name, field in method.model_fields.items():
             field_value = dump.get(name)
@@ -172,6 +151,45 @@ class BaseSession(ABC):
             fields[field.serialization_alias or name] = field_value
 
         return payload
+
+    def _prepare_payload(
+        self,
+        client: Stollen,
+        method: StollenMethod[StollenT, StollenClientT],
+    ) -> dict[str, Any]:
+        default_field_type: str = (
+            method.default_field_type
+            if method.default_field_type != RequestFieldType.AUTO
+            else RequestFieldType.resolve(http_method=method.http_method)
+        )
+
+        # For non-dictionary models
+        if isinstance(method, RootModel):
+            return {default_field_type: method.model_dump()}
+
+        payload: dict[str, dict[str, Any]] = {
+            RequestFieldType.BODY: {},
+            RequestFieldType.QUERY: {},
+            RequestFieldType.HEADER: {},
+            RequestFieldType.PLACEHOLDER: {},
+        }
+
+        for g_field in client.global_request_fields:
+            if callable(g_field):
+                g_field = g_field(client, method)  # type: ignore[assignment, arg-type]
+            if isinstance(g_field, Iterable):
+                for _g_field in g_field:
+                    payload[_g_field.type][_g_field.name] = _g_field.value
+                continue
+            g_field = cast(RequestField, g_field)
+            payload[g_field.type][g_field.name] = g_field.value
+
+        return self._prepare_method_fields(
+            client=client,
+            method=method,
+            default_field_type=default_field_type,
+            payload=payload,
+        )
 
     def to_request(
         self,
