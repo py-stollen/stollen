@@ -62,7 +62,7 @@ class AiohttpSession(BaseSession):
         body_kwargs: dict[str, Any] = (
             (
                 {"data": request.body}
-                if not isinstance(request.body, dict)
+                if isinstance(request.body, (str, bytes))
                 else {"json": request.body}
             )
             if request.body
