@@ -1,25 +1,24 @@
+# Project environment
 .idea/
 .vscode/
+.code-workspace
+.tests/
+data/*
+uv.lock
 
+# Cache
 __pycache__/
 *.py[cod]
-*.mo
+.cache/
+.ruff_cache/
+.mypy_cache/
+.pytest_cache/
+.coverage/
 
-env/
+# Build
 build/
 _build/
 dist/
 site/
 *.egg-info/
 *.egg
-
-.ruff_cache
-.mypy_cache
-.pytest_cache
-.coverage
-
-venv/
-.venv/
-.hatch/
-
-.tests

@@ -57,6 +57,7 @@ class AiohttpSession(BaseSession):
         self,
         client: StollenClientT,
         request: StollenRequest,
+        request_timeout: int,
     ) -> tuple[StollenResponse, Any]:
         session: ClientSession = await self.get_session()
         body_kwargs: dict[str, Any] = (
@@ -74,6 +75,7 @@ class AiohttpSession(BaseSession):
             headers=request.headers,
             params=request.query,
             verify_ssl=False,
+            timeout=request_timeout,
             **body_kwargs,
         )
 

@@ -9,6 +9,7 @@ from pydantic import RootModel, TypeAdapter, ValidationError
 from typing_extensions import Self
 
 from .. import loggers
+from ..const import DEFAULT_REQUEST_TIMEOUT
 from ..enums import RequestFieldType
 from ..exceptions import DetailedStollenAPIError, StollenError
 from ..requests.fields import RequestField
@@ -48,6 +49,7 @@ class BaseSession(ABC):
         self,
         client: StollenClientT,
         request: StollenRequest,
+        request_timeout: int,
     ) -> tuple[StollenResponse, Any]:
         pass
 
@@ -230,6 +232,7 @@ class BaseSession(ABC):
         self,
         client: Stollen,
         method: StollenMethod[StollenT, StollenClientT],
+        request_timeout: int = DEFAULT_REQUEST_TIMEOUT,
     ) -> StollenT:
         request: StollenRequest = self.to_request(client=client, method=method)
         loggers.client.debug(
@@ -240,6 +243,7 @@ class BaseSession(ABC):
         response, data = await self.make_request(
             client=client,
             request=request,
+            request_timeout=request_timeout,
         )
         loggers.client.debug(
             "%s request to the endpoint %s has been made with status code %d",
