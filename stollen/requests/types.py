@@ -2,6 +2,8 @@ from typing import Any, Optional, Union
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from .input_file import InputFile
+
 
 class StollenRequest(BaseModel):
     url: str
@@ -10,6 +12,7 @@ class StollenRequest(BaseModel):
     headers: dict[str, Any] = Field(default_factory=dict)
     query: dict[str, Union[str, int, float]] = Field(default_factory=dict)
     body: Optional[Any] = None
+    files: Optional[dict[str, InputFile]] = None
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 

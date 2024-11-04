@@ -3,16 +3,17 @@ from __future__ import annotations
 import json
 from abc import ABC, abstractmethod
 from types import TracebackType
-from typing import TYPE_CHECKING, Any, Iterable, Optional, cast
+from typing import TYPE_CHECKING, Any, AsyncGenerator, Iterable, Optional, cast
 
 from pydantic import RootModel, TypeAdapter, ValidationError
 from typing_extensions import Self
 
 from .. import loggers
-from ..const import DEFAULT_REQUEST_TIMEOUT
+from ..const import DEFAULT_CHUNK_SIZE, DEFAULT_REQUEST_TIMEOUT
 from ..enums import RequestFieldType
 from ..exceptions import DetailedStollenAPIError, StollenError
 from ..requests.fields import RequestField
+from ..requests.input_file import InputFile
 from ..requests.types import StollenRequest, StollenResponse
 from ..utils.mapping import recursive_getitem
 
@@ -45,6 +46,13 @@ class BaseSession(ABC):
         self.exclude_none_in_methods = exclude_none_in_methods
 
     @abstractmethod
+    async def close(self) -> None:
+        """
+        Close client session
+        """
+        pass
+
+    @abstractmethod
     async def make_request(
         self,
         client: StollenClientT,
@@ -54,11 +62,15 @@ class BaseSession(ABC):
         pass
 
     @abstractmethod
-    async def close(self) -> None:
-        """
-        Close client session
-        """
-        pass
+    async def stream_content(
+        self,
+        url: str,
+        headers: Optional[dict[str, Any]] = None,
+        timeout: int = DEFAULT_REQUEST_TIMEOUT,
+        chunk_size: int = DEFAULT_CHUNK_SIZE,
+        raise_for_status: bool = True,
+    ) -> AsyncGenerator[bytes, None]:
+        yield b""
 
     @classmethod
     def prepare_response(
@@ -126,6 +138,11 @@ class BaseSession(ABC):
         dump: dict[str, Any] = method.model_dump()
         for name, field in method.model_fields.items():
             field_value = dump.get(name)
+
+            if isinstance(field_value, InputFile):
+                payload[RequestFieldType.FILE][name] = field_value
+                continue
+
             if field_value is None:
                 field_factory: Optional[RequestFieldFactory] = (
                     field.json_schema_extra.get("field_factory")  # type: ignore[assignment]
@@ -174,6 +191,7 @@ class BaseSession(ABC):
             RequestFieldType.QUERY: {},
             RequestFieldType.HEADER: {},
             RequestFieldType.PLACEHOLDER: {},
+            RequestFieldType.FILE: {},
         }
 
         for g_field in client.global_request_fields:
@@ -226,6 +244,7 @@ class BaseSession(ABC):
             headers=payload.pop(RequestFieldType.HEADER, {}),
             query=payload.pop(RequestFieldType.QUERY, {}),
             body=payload.pop(RequestFieldType.BODY, {}),
+            files=payload.pop(RequestFieldType.FILE, {}),
         )
 
     async def __call__(

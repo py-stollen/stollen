@@ -11,6 +11,7 @@ class RequestFieldType(str, Enum):
     QUERY = auto()
     HEADER = auto()
     PLACEHOLDER = auto()
+    FILE = auto()
 
     @classmethod
     def resolve(cls, http_method: str) -> RequestFieldType:

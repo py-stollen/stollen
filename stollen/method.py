@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, ClassVar, Generator, Generic, Optional
+from typing import TYPE_CHECKING, Any, ClassVar, Generator, Generic, Optional, Union
 
-from pydantic import BaseModel, TypeAdapter
+from pydantic import BaseModel, ConfigDict, TypeAdapter
 
 from .client import StollenClientT
 from .client.context_controller import StollenContextController
@@ -19,7 +19,7 @@ class StollenMethod(
     Generic[StollenT, StollenClientT],
 ):
     subdomain: ClassVar[Optional[str]]
-    http_method: ClassVar[HTTPMethod | HTTPMethodType]
+    http_method: ClassVar[Union[HTTPMethod, HTTPMethodType]]
     api_method: ClassVar[str]
     returning: ClassVar[type[Any]]
     response_data_key: ClassVar[list[str]]
@@ -80,3 +80,9 @@ class StollenMethod(
             if getattr(cls, "returning", None):
                 cls.type_adapter = TypeAdapter[StollenT](cls.returning)
         super().__init_subclass__(**kwargs)
+
+    model_config = ConfigDict(
+        extra="allow",
+        validate_assignment=True,
+        arbitrary_types_allowed=True,
+    )

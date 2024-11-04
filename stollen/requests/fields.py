@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any, Optional, Union
 
 from pydantic import Field
 
@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 @dataclass()
 class RequestField:
     name: str
-    value: str | int
+    value: Union[str, int]
     type: str
 
 

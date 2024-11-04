@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import json
 from ssl import SSLContext, create_default_context
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any, AsyncGenerator, Optional, cast
 
 import certifi
-from aiohttp import ClientResponse, ClientSession, TCPConnector, hdrs
+from aiohttp import ClientResponse, ClientSession, FormData, TCPConnector, hdrs
 
+from ..const import DEFAULT_CHUNK_SIZE, DEFAULT_REQUEST_TIMEOUT
+from ..requests.input_file import InputFile
 from ..requests.types import StollenRequest, StollenResponse
 from .base import BaseSession
 
@@ -53,22 +55,38 @@ class AiohttpSession(BaseSession):
         if self._session is not None and not self._session.closed:
             await self._session.close()
 
+    def build_form_data(self, client: StollenClientT, request: StollenRequest) -> FormData:
+        form: FormData = FormData(quote_fields=False)
+        body: dict[str, Any] = cast(dict[str, Any], request.body)
+        files: dict[str, InputFile] = cast(dict[str, InputFile], request.files)
+
+        for name, value in body.items():
+            form.add_field(name, self.json_dumps(value))
+
+        for name, file in files.items():
+            form.add_field(
+                name,
+                file.read(client),
+                filename=file.filename or name,
+            )
+
+        return form
+
     async def make_request(
         self,
         client: StollenClientT,
         request: StollenRequest,
         request_timeout: int,
     ) -> tuple[StollenResponse, Any]:
+        body_kwargs: dict[str, Any] = {}
+        if isinstance(request.body, (str, bytes)):
+            body_kwargs["data"] = request.body
+        elif request.files:
+            body_kwargs["data"] = self.build_form_data(client=client, request=request)
+        else:
+            body_kwargs["json"] = request.body
+
         session: ClientSession = await self.get_session()
-        body_kwargs: dict[str, Any] = (
-            (
-                {"data": request.body}
-                if isinstance(request.body, (str, bytes))
-                else {"json": request.body}
-            )
-            if request.body
-            else {}
-        )
         response: ClientResponse = await session.request(
             method=request.http_method,
             url=request.url,
@@ -94,3 +112,24 @@ class AiohttpSession(BaseSession):
             request=request,
             response=raw_response,
         )
+
+    async def stream_content(
+        self,
+        url: str,
+        headers: Optional[dict[str, Any]] = None,
+        timeout: int = DEFAULT_REQUEST_TIMEOUT,
+        chunk_size: int = DEFAULT_CHUNK_SIZE,
+        raise_for_status: bool = True,
+    ) -> AsyncGenerator[bytes, None]:
+        if headers is None:
+            headers = {}
+
+        session: ClientSession = await self.get_session()
+        async with session.get(
+            url=url,
+            timeout=timeout,
+            headers=headers,
+            raise_for_status=raise_for_status,
+        ) as resp:
+            async for chunk in resp.content.iter_chunked(chunk_size):
+                yield chunk
