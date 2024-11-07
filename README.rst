@@ -16,7 +16,7 @@ stollen
     :alt: PyPi Package Version
 
 .. image:: https://img.shields.io/pypi/dm/stollen.svg?style=flat-square
-    :target: https://pypi.python.org/pypi/stollen
+    :target: https://pypistats.org/packages/stollen
     :alt: Downloads
 
 .. image:: https://img.shields.io/pypi/pyversions/stollen.svg?style=flat-square
