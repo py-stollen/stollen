@@ -14,6 +14,11 @@ RequestFieldFactory: TypeAlias = Callable[
     Union[RequestField, Iterable[RequestField]],
 ]
 
+AnyValueFactory: TypeAlias = Callable[
+    [Stollen, StollenMethod[Any, Stollen]],
+    Any,
+]
+
 
 class BaseRequestFieldFactory(ABC):
     @abstractmethod

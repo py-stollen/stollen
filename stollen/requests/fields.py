@@ -8,7 +8,7 @@ from pydantic import Field
 from ..enums import RequestFieldType
 
 if TYPE_CHECKING:
-    from .factory import RequestFieldFactory
+    from .factory import AnyValueFactory
 
 
 @dataclass()
@@ -40,9 +40,9 @@ class Placeholder(RequestField):
 
 def request_field(
     field_type: RequestFieldType,
-    field_factory: Optional[RequestFieldFactory] = None,
+    field_factory: Optional[AnyValueFactory] = None,
     **pydantic_kwargs: Any,
-) -> Any:  # noqa: N802
+) -> Any:
     if field_factory is not None:
         pydantic_kwargs.update(default=None)
     data: dict[str, Any] = {"field_type": field_type, "field_factory": field_factory}
@@ -53,7 +53,7 @@ def request_field(
 
 
 def QueryField(  # noqa: N802
-    field_factory: Optional[RequestFieldFactory] = None,
+    field_factory: Optional[AnyValueFactory] = None,
     **pydantic_kwargs: Any,
 ) -> Any:
     return request_field(
@@ -64,7 +64,7 @@ def QueryField(  # noqa: N802
 
 
 def BodyField(  # noqa: N802
-    field_factory: Optional[RequestFieldFactory] = None,
+    field_factory: Optional[AnyValueFactory] = None,
     **pydantic_kwargs: Any,
 ) -> Any:
     return request_field(
@@ -75,7 +75,7 @@ def BodyField(  # noqa: N802
 
 
 def HeaderField(  # noqa: N802
-    field_factory: Optional[RequestFieldFactory] = None,
+    field_factory: Optional[AnyValueFactory] = None,
     **pydantic_kwargs: Any,
 ) -> Any:
     return request_field(
@@ -86,7 +86,7 @@ def HeaderField(  # noqa: N802
 
 
 def PlaceholderField(  # noqa: N802
-    field_factory: Optional[RequestFieldFactory] = None,
+    field_factory: Optional[AnyValueFactory] = None,
     **pydantic_kwargs: Any,
 ) -> Any:
     return request_field(

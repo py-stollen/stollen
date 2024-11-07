@@ -50,7 +50,9 @@ class AiohttpSession(BaseSession):
         files: dict[str, InputFile] = cast(dict[str, InputFile], request.files)
 
         for name, value in body.items():
-            form.add_field(name, self.serializer.json_dumps(value))
+            if not isinstance(value, (str, int, float)):
+                value = self.json_dumps(value)
+            form.add_field(name, str(value))
 
         for name, file in files.items():
             form.add_field(

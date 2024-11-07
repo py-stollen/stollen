@@ -28,13 +28,13 @@ class BaseSession(ABC):
 
     json_loads: JsonLoads
     json_dumps: JsonDumps
-    exclude_none_in_methods: bool
+    exclude_defaults: bool
     serializer: RequestSerializer
 
     def __init__(self, *, serializer: RequestSerializer = RequestSerializer()) -> None:
         self.json_loads = serializer.json_loads
         self.json_dumps = serializer.json_dumps
-        self.exclude_none_in_methods = serializer.exclude_none_in_methods
+        self.exclude_defaults = serializer.exclude_defaults
         self.serializer = serializer
 
     @abstractmethod

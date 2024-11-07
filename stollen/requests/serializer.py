@@ -3,7 +3,10 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING, Any, Iterable, Optional, cast
 
-from pydantic import RootModel
+from pydantic import BaseModel, RootModel
+
+# noinspection PyProtectedMember
+from pydantic.fields import FieldInfo
 
 from ..enums import RequestFieldType
 from ..requests.fields import RequestField
@@ -27,25 +30,61 @@ class RequestSerializer:
         *,
         json_loads: JsonLoads = json.loads,
         json_dumps: JsonDumps = json.dumps,
-        exclude_none_in_methods: bool = True,
+        exclude_defaults: bool = True,
     ) -> None:
         self.json_loads = json_loads
         self.json_dumps = json_dumps
-        self.exclude_none_in_methods = exclude_none_in_methods
+        self.exclude_defaults = exclude_defaults
 
     @classmethod
-    def format_method(
-        cls,
+    def format_url(cls, url: str, payload: dict[str, dict[str, Any]]) -> str:
+        to_format: dict[str, Any] = {}
+        for data in payload.values():
+            for key in data.copy():
+                if f"{{{key}}}" in url:
+                    to_format[key] = data.pop(key)
+        return url.format(**to_format)
+
+    def _prepare_field(
+        self,
+        client: Stollen,
         method: StollenMethod[StollenT, StollenClientT],
-        payload: dict[str, Any],
-    ) -> str:
-        return method.api_method.format(
-            **{
-                key: payload.pop(key)
-                for key in payload.copy()
-                if f"{{{key}}}" in method.api_method
-            }
+        default_field_type: str,
+        field: FieldInfo,
+        field_value: Any,
+    ) -> tuple[str, Any]:
+        field_type = cast(
+            str,
+            (
+                field.json_schema_extra.get("field_type", default_field_type)
+                if isinstance(field.json_schema_extra, dict)
+                else default_field_type
+            ),
         )
+
+        if field_value is None:
+            field_factory: Optional[RequestFieldFactory] = (
+                field.json_schema_extra.get("field_factory")  # type: ignore[assignment]
+                if isinstance(field.json_schema_extra, dict)
+                else None
+            )
+
+            if field_factory is not None:
+                field_value = field_factory(client, method)  # type: ignore[arg-type]
+
+            if isinstance(field_value, BaseModel):
+                field_value = field_value.model_dump(exclude_defaults=self.exclude_defaults)
+
+            if field_value is None:
+                return field_type, None
+
+        if field_type == RequestFieldType.QUERY and not isinstance(
+            field_value,
+            (str, int, float),
+        ):
+            field_value = self.json_dumps(field_value)
+
+        return field_type, field_value
 
     def _prepare_method_fields(
         self,
@@ -54,38 +93,24 @@ class RequestSerializer:
         default_field_type: str,
         payload: dict[str, dict[str, Any]],
     ) -> dict[str, Any]:
-        dump: dict[str, Any] = method.model_dump()
+        dump: dict[str, Any] = method.model_dump(exclude_defaults=self.exclude_defaults)
         for name, field in method.model_fields.items():
             field_value = dump.get(name)
-
             if isinstance(field_value, InputFile):
                 payload[RequestFieldType.FILE][name] = field_value
                 continue
 
-            if field_value is None:
-                field_factory: Optional[RequestFieldFactory] = (
-                    field.json_schema_extra.get("field_factory")  # type: ignore[assignment]
-                    if isinstance(field.json_schema_extra, dict)
-                    else None
-                )
-                if field_factory is not None:
-                    field_value = field_factory(client, method)  # type: ignore[arg-type]
-                if field_value is None and self.exclude_none_in_methods:
-                    continue
-            field_type = cast(
-                str,
-                (
-                    field.json_schema_extra.get("field_type", default_field_type)
-                    if isinstance(field.json_schema_extra, dict)
-                    else default_field_type
-                ),
+            field_type, field_value = self._prepare_field(
+                client=client,
+                method=method,
+                default_field_type=default_field_type,
+                field=field,
+                field_value=field_value,
             )
+            if field_value is None and self.exclude_defaults:
+                continue
+
             fields = payload.setdefault(field_type, {})
-            if field_type == RequestFieldType.QUERY and not isinstance(
-                field_value,
-                (str, int, float),
-            ):
-                field_value = self.json_dumps(field_value)
             fields[field.serialization_alias or name] = field_value
 
         return payload
@@ -106,10 +131,10 @@ class RequestSerializer:
             return {default_field_type: method.model_dump()}
 
         payload: dict[str, dict[str, Any]] = {
+            RequestFieldType.PLACEHOLDER: {},
             RequestFieldType.BODY: {},
             RequestFieldType.QUERY: {},
             RequestFieldType.HEADER: {},
-            RequestFieldType.PLACEHOLDER: {},
             RequestFieldType.FILE: {},
         }
 
@@ -144,20 +169,13 @@ class RequestSerializer:
                 raise ValueError("Request subdomain is missing!")
             raw_url = raw_url.format(subdomain=subdomain)
 
-        to_format: dict[str, Any] = {}
-        for data in payload.values():
-            if not isinstance(data, dict):
-                continue
-            to_format.update(data)
-
-        api_method: str = self.format_method(
-            method=method,
-            payload=to_format,
+        url: str = self.format_url(
+            url=f"{raw_url}/{method.api_method.removeprefix('/')}",
+            payload=payload,
         )
-        raw_url = f"{raw_url}/{api_method.removeprefix('/')}"
 
         return StollenRequest(
-            url=raw_url.format(**payload.pop(RequestFieldType.PLACEHOLDER, {})),
+            url=url,
             http_method=method.http_method,
             response_data_key=method.response_data_key,
             headers=payload.pop(RequestFieldType.HEADER, {}),
