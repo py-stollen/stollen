@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING, Any, Optional, Union
 
 from aiogram.types import LinkPreviewOptions
 
@@ -12,13 +12,19 @@ if TYPE_CHECKING:
 
 
 class TelegramBot(Stollen):
-    def __init__(self, token: str, link_preview_disabled: bool = True) -> None:
+    def __init__(
+        self,
+        token: str,
+        link_preview_disabled: bool = True,
+        **stollen_kwargs: Any,
+    ) -> None:
         self.token = token
         self.link_preview_disabled = link_preview_disabled
         super().__init__(
             base_url="https://api.telegram.org/bot{token}",
             response_data_key=["result"],
             global_request_fields=[Placeholder(name="token", value=token)],
+            **stollen_kwargs,
         )
 
     async def send_photo(

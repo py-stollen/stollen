@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from datetime import datetime
-from typing import Optional, Union
+from typing import Any, Optional, Union
 
 from stollen import Stollen, StollenMethod, StollenObject
 from stollen.enums import HTTPMethod
@@ -11,12 +11,13 @@ from stollen.requests import FSInputFile, InputFile, Placeholder
 
 
 class Bot(Stollen):
-    def __init__(self, token: str) -> None:
+    def __init__(self, token: str, **stollen_kwargs: Any) -> None:
         self.token = token
         super().__init__(
             base_url="https://api.telegram.org/bot{token}",
             response_data_key=["result"],
             global_request_fields=[Placeholder(name="token", value=token)],
+            **stollen_kwargs,
         )
 
     async def send_photo(
