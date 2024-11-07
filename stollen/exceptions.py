@@ -1,7 +1,7 @@
 import json
 from typing import Any
 
-from .requests.types import StollenRequest, StollenResponse
+from .requests import StollenRequest, StollenResponse
 
 
 class StollenError(Exception):

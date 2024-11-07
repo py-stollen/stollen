@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 from ssl import SSLContext, create_default_context
 from typing import TYPE_CHECKING, Any, AsyncGenerator, Optional, cast
 
@@ -8,13 +7,13 @@ import certifi
 from aiohttp import ClientResponse, ClientSession, FormData, TCPConnector, hdrs
 
 from ..const import DEFAULT_CHUNK_SIZE, DEFAULT_REQUEST_TIMEOUT
+from ..requests import RequestSerializer
 from ..requests.input_file import InputFile
 from ..requests.types import StollenRequest, StollenResponse
 from .base import BaseSession
 
 if TYPE_CHECKING:
     from ..client import StollenClientT
-    from ..types import JsonDumps, JsonLoads
 
 
 class AiohttpSession(BaseSession):
@@ -22,18 +21,8 @@ class AiohttpSession(BaseSession):
     _ssl_context: SSLContext
     _should_reset_connector: bool
 
-    def __init__(
-        self,
-        *,
-        json_loads: JsonLoads = json.loads,
-        json_dumps: JsonDumps = json.dumps,
-        exclude_none_in_methods: bool = True,
-    ) -> None:
-        super().__init__(
-            json_loads=json_loads,
-            json_dumps=json_dumps,
-            exclude_none_in_methods=exclude_none_in_methods,
-        )
+    def __init__(self, *, serializer: RequestSerializer = RequestSerializer()) -> None:
+        super().__init__(serializer=serializer)
         self._session = None
         self._ssl_context = create_default_context(cafile=certifi.where())
         self._should_reset_connector = True
@@ -45,7 +34,7 @@ class AiohttpSession(BaseSession):
         if self._session is None or self._session.closed:
             self._session = ClientSession(
                 connector=TCPConnector(limit=100, ssl=self._ssl_context),
-                json_serialize=self.json_dumps,
+                json_serialize=self.serializer.json_dumps,
             )
             self._should_reset_connector = False
 
@@ -61,7 +50,7 @@ class AiohttpSession(BaseSession):
         files: dict[str, InputFile] = cast(dict[str, InputFile], request.files)
 
         for name, value in body.items():
-            form.add_field(name, self.json_dumps(value))
+            form.add_field(name, self.serializer.json_dumps(value))
 
         for name, file in files.items():
             form.add_field(
@@ -99,7 +88,7 @@ class AiohttpSession(BaseSession):
 
         body: Any = await response.text()
         if response.headers.get(hdrs.CONTENT_TYPE, "").startswith("application/json"):
-            body = self.json_loads(body)
+            body = self.serializer.json_loads(body)
 
         raw_response: StollenResponse = StollenResponse(
             status_code=response.status,

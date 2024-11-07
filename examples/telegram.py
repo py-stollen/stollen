@@ -7,8 +7,7 @@ from typing import Optional, Union
 
 from stollen import Stollen, StollenMethod, StollenObject
 from stollen.enums import HTTPMethod
-from stollen.requests.fields import Placeholder
-from stollen.requests.input_file import FSInputFile, InputFile
+from stollen.requests import FSInputFile, InputFile, Placeholder
 
 
 class Bot(Stollen):

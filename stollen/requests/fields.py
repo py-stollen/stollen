@@ -52,7 +52,6 @@ def request_field(
     )  # type: ignore[pydantic-field]
 
 
-# noinspection DuplicatedCode
 def QueryField(  # noqa: N802
     field_factory: Optional[RequestFieldFactory] = None,
     **pydantic_kwargs: Any,
@@ -75,7 +74,6 @@ def BodyField(  # noqa: N802
     )
 
 
-# noinspection DuplicatedCode
 def HeaderField(  # noqa: N802
     field_factory: Optional[RequestFieldFactory] = None,
     **pydantic_kwargs: Any,
