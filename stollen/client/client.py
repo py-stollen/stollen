@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING, Iterable, Optional, TypeVar, Union
 
 from typing_extensions import Self
 
-from ..const import DEFAULT_REQUEST_TIMEOUT
 from ..exceptions import StollenAPIError, StollenError
 from ..session.aiohttp import AiohttpSession
 
@@ -65,7 +64,7 @@ class Stollen:
     async def __call__(
         self,
         method: StollenMethod[StollenT, StollenClientT],
-        request_timeout: int = DEFAULT_REQUEST_TIMEOUT,
+        request_timeout: Optional[int] = None,
     ) -> StollenT:
         return await self.session(
             client=self,

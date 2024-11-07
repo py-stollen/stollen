@@ -1,30 +1,70 @@
 from __future__ import annotations
 
-from ssl import SSLContext, create_default_context
+import asyncio
+from ssl import create_default_context
 from typing import TYPE_CHECKING, Any, AsyncGenerator, Optional, cast
 
 import certifi
 from aiohttp import ClientResponse, ClientSession, FormData, TCPConnector, hdrs
 
-from ..const import DEFAULT_CHUNK_SIZE, DEFAULT_REQUEST_TIMEOUT
-from ..requests import RequestSerializer
-from ..requests.input_file import InputFile
-from ..requests.types import StollenRequest, StollenResponse
-from .base import BaseSession
+from ...const import DEFAULT_CHUNK_SIZE, DEFAULT_REQUEST_TIMEOUT
+from ...requests import InputFile, RequestSerializer, StollenRequest, StollenResponse
+from ..base import BaseSession
+from .proxy import ProxyType, prepare_connector
 
 if TYPE_CHECKING:
-    from ..client import StollenClientT
+    from ...client import StollenClientT
 
 
 class AiohttpSession(BaseSession):
     _session: Optional[ClientSession]
-    _ssl_context: SSLContext
+    _connector_type: type[TCPConnector]
+    _connector_kwargs: dict[str, Any]
     _should_reset_connector: bool
+    _proxy: Optional[ProxyType]
 
-    def __init__(self, *, serializer: RequestSerializer = RequestSerializer()) -> None:
-        super().__init__(serializer=serializer)
+    def __init__(
+        self,
+        serializer: RequestSerializer = RequestSerializer(),
+        timeout: int = DEFAULT_REQUEST_TIMEOUT,
+        limit: int = 100,
+        proxy: Optional[ProxyType] = None,
+        **connector_kwargs: Any,
+    ) -> None:
+        """
+        Client session based on aiohttp.
+
+        :param limit: The total number of simultaneous connections. Default is 100.
+        :param proxy: The proxy to be used for requests. Default is None.
+        :param connector_kwargs: Additional connector kwargs.
+        """
+        super().__init__(serializer=serializer, timeout=timeout)
         self._session = None
-        self._ssl_context = create_default_context(cafile=certifi.where())
+        self._connector_type = TCPConnector
+        self._connector_kwargs = {
+            "ssl": create_default_context(cafile=certifi.where()),
+            "limit": limit,
+        }
+        self._connector_kwargs.update(connector_kwargs)
+        self._should_reset_connector = True
+        self._proxy = proxy
+        if proxy is not None:
+            try:
+                self.setup_proxy(proxy)
+            except ImportError as error:
+                raise RuntimeError(
+                    "In order to use aiohttp client for proxy requests, install "
+                    "https://pypi.org/project/aiohttp-socks/."
+                    "You can do it by running `pip install stollen[proxy]`."
+                ) from error
+
+    @property
+    def proxy(self) -> Optional[ProxyType]:
+        return self._proxy
+
+    def setup_proxy(self, proxy: ProxyType) -> None:
+        self._connector_type, self._connector_kwargs = prepare_connector(proxy)
+        self._proxy = proxy
         self._should_reset_connector = True
 
     async def get_session(self) -> ClientSession:
@@ -33,7 +73,7 @@ class AiohttpSession(BaseSession):
 
         if self._session is None or self._session.closed:
             self._session = ClientSession(
-                connector=TCPConnector(limit=100, ssl=self._ssl_context),
+                connector=self._connector_type(**self._connector_kwargs),
                 json_serialize=self.serializer.json_dumps,
             )
             self._should_reset_connector = False
@@ -43,6 +83,10 @@ class AiohttpSession(BaseSession):
     async def close(self) -> None:
         if self._session is not None and not self._session.closed:
             await self._session.close()
+
+            # Wait 250 ms for the underlying SSL connections to close
+            # https://docs.aiohttp.org/en/stable/client_advanced.html#graceful-shutdown
+            await asyncio.sleep(0.25)
 
     def build_form_data(self, client: StollenClientT, request: StollenRequest) -> FormData:
         form: FormData = FormData(quote_fields=False)
@@ -67,7 +111,7 @@ class AiohttpSession(BaseSession):
         self,
         client: StollenClientT,
         request: StollenRequest,
-        request_timeout: int,
+        request_timeout: Optional[int] = None,
     ) -> tuple[StollenResponse, Any]:
         body_kwargs: dict[str, Any] = {}
         if isinstance(request.body, (str, bytes)):
@@ -84,7 +128,7 @@ class AiohttpSession(BaseSession):
             headers=request.headers,
             params=request.query,
             verify_ssl=False,
-            timeout=request_timeout,
+            timeout=request_timeout or self.timeout,
             **body_kwargs,
         )
 

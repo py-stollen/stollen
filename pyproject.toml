@@ -22,10 +22,11 @@ keywords = [
     "client",
 ]
 dependencies = [
-    "aiofiles>=24.1.0",
-    "aiohttp~=3.9.0",
-    "certifi>=2023.7.22",
+    "aiohttp>=3.9.0,<3.11",
     "pydantic>=2.4.1,<2.10",
+    "aiofiles>=23.2.1,<24.2",
+    "certifi>=2023.7.22",
+    "typing-extensions>=4.7.0,<=5.0",
 ]
 classifiers = [
     "License :: OSI Approved :: MIT License",
@@ -51,6 +52,9 @@ dev = [
     "mypy~=1.10.0",
     "pre-commit~=3.6",
     "types-aiofiles>=24.1.0.20240626",
+]
+proxy = [
+    "aiohttp-socks>=0.8,<0.10",
 ]
 
 [project.urls]

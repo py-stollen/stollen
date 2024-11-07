@@ -30,12 +30,19 @@ class BaseSession(ABC):
     json_dumps: JsonDumps
     exclude_defaults: bool
     serializer: RequestSerializer
+    timeout: int
 
-    def __init__(self, *, serializer: RequestSerializer = RequestSerializer()) -> None:
+    def __init__(
+        self,
+        *,
+        serializer: RequestSerializer = RequestSerializer(),
+        timeout: int = DEFAULT_REQUEST_TIMEOUT,
+    ) -> None:
         self.json_loads = serializer.json_loads
         self.json_dumps = serializer.json_dumps
         self.exclude_defaults = serializer.exclude_defaults
         self.serializer = serializer
+        self.timeout = timeout
 
     @abstractmethod
     async def close(self) -> None:
@@ -49,7 +56,7 @@ class BaseSession(ABC):
         self,
         client: StollenClientT,
         request: StollenRequest,
-        request_timeout: int,
+        request_timeout: Optional[int] = None,
     ) -> tuple[StollenResponse, Any]:
         pass
 
@@ -107,7 +114,7 @@ class BaseSession(ABC):
         self,
         client: Stollen,
         method: StollenMethod[StollenT, StollenClientT],
-        request_timeout: int = DEFAULT_REQUEST_TIMEOUT,
+        request_timeout: Optional[int] = None,
     ) -> StollenT:
         request: StollenRequest = self.serializer.to_request(client=client, method=method)
         loggers.client.debug(
