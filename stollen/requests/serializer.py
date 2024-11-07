@@ -143,10 +143,12 @@ class RequestSerializer:
                 g_field = g_field(client, method)  # type: ignore[assignment, arg-type]
             if isinstance(g_field, Iterable):
                 for _g_field in g_field:
-                    payload[_g_field.type][_g_field.name] = _g_field.value
+                    payload[_g_field.type][_g_field.name] = _g_field.dump()
+                continue
+            if g_field is None:
                 continue
             g_field = cast(RequestField, g_field)
-            payload[g_field.type][g_field.name] = g_field.value
+            payload[g_field.type][g_field.name] = g_field.dump()
 
         return self._prepare_method_fields(
             client=client,

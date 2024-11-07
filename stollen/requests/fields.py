@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Optional, Union
+from typing import TYPE_CHECKING, Any, Optional
 
-from pydantic import Field
+from pydantic import BaseModel, Field
 
 from ..enums import RequestFieldType
 
@@ -14,8 +14,13 @@ if TYPE_CHECKING:
 @dataclass()
 class RequestField:
     name: str
-    value: Union[str, int]
+    value: Any
     type: str
+
+    def dump(self) -> Any:
+        if isinstance(self.value, BaseModel):
+            return self.value.model_dump()
+        return self.value
 
 
 @dataclass()
@@ -44,7 +49,7 @@ def request_field(
     **pydantic_kwargs: Any,
 ) -> Any:
     if field_factory is not None:
-        pydantic_kwargs.update(default=None)
+        pydantic_kwargs.setdefault("default", None)
     data: dict[str, Any] = {"field_type": field_type, "field_factory": field_factory}
     return Field(
         json_schema_extra=data,

@@ -16,9 +16,7 @@ class Bot(Stollen):
         super().__init__(
             base_url="https://api.telegram.org/bot{token}",
             response_data_key=["result"],
-            global_request_fields=[
-                lambda stollen, request: Placeholder(name="token", value=token),
-            ],
+            global_request_fields=[Placeholder(name="token", value=token)],
         )
 
     async def send_photo(

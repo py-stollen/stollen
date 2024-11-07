@@ -1,0 +1,40 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Optional, Union
+
+from aiogram.types import LinkPreviewOptions
+
+from stollen import Stollen
+from stollen.requests import InputFile, Placeholder
+
+if TYPE_CHECKING:
+    from .types import Message
+
+
+class TelegramBot(Stollen):
+    def __init__(self, token: str, link_preview_disabled: bool = True) -> None:
+        self.token = token
+        self.link_preview_disabled = link_preview_disabled
+        super().__init__(
+            base_url="https://api.telegram.org/bot{token}",
+            response_data_key=["result"],
+            global_request_fields=[Placeholder(name="token", value=token)],
+        )
+
+    async def send_photo(
+        self,
+        chat_id: Union[int, str],
+        photo: Union[InputFile, str],
+        caption: Optional[str] = None,
+        link_preview_options: Optional[LinkPreviewOptions] = None,
+    ) -> Message:
+        from .methods import SendPhoto
+
+        call: SendPhoto = SendPhoto(
+            chat_id=chat_id,
+            photo=photo,
+            caption=caption,
+            link_preview_options=link_preview_options,
+        )
+
+        return await self(call)
