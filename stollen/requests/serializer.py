@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 class RequestSerializer:
     json_loads: JsonLoads
     json_dumps: JsonDumps
-    exclude_none_in_methods: bool
+    exclude_defaults: bool
 
     def __init__(
         self,
