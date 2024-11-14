@@ -82,7 +82,6 @@ class StollenMethod(
         super().__init_subclass__(**kwargs)
 
     model_config = ConfigDict(
-        extra="allow",
         validate_assignment=True,
         arbitrary_types_allowed=True,
     )
