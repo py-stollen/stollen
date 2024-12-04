@@ -111,7 +111,7 @@ class RequestSerializer:
                 continue
 
             fields = payload.setdefault(field_type, {})
-            fields[field.serialization_alias or name] = field_value
+            fields[field.serialization_alias or field.alias or name] = field_value
 
         return payload
 
