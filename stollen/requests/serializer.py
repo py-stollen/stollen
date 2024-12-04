@@ -93,11 +93,17 @@ class RequestSerializer:
         default_field_type: str,
         payload: dict[str, dict[str, Any]],
     ) -> dict[str, Any]:
-        dump: dict[str, Any] = method.model_dump(exclude_defaults=self.exclude_defaults)
+        dump: dict[str, Any] = method.model_dump(
+            by_alias=True,
+            exclude_defaults=self.exclude_defaults,
+        )
+
         for name, field in method.model_fields.items():
-            field_value = dump.get(name)
+            key: str = field.serialization_alias or field.alias or name
+
+            field_value = dump.get(key)
             if isinstance(field_value, InputFile):
-                payload[RequestFieldType.FILE][name] = field_value
+                payload[RequestFieldType.FILE][key] = field_value
                 continue
 
             field_type, field_value = self._prepare_field(
@@ -111,7 +117,7 @@ class RequestSerializer:
                 continue
 
             fields = payload.setdefault(field_type, {})
-            fields[field.serialization_alias or field.alias or name] = field_value
+            fields[key] = field_value
 
         return payload
 
