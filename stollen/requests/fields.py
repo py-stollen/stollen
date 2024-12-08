@@ -3,19 +3,24 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Optional
 
-from pydantic import Field
+from pydantic import BaseModel, Field
 
 from ..enums import RequestFieldType
 
 if TYPE_CHECKING:
-    from .factory import RequestFieldFactory
+    from .factory import AnyValueFactory
 
 
 @dataclass()
 class RequestField:
     name: str
-    value: str | int
+    value: Any
     type: str
+
+    def dump(self) -> Any:
+        if isinstance(self.value, BaseModel):
+            return self.value.model_dump()
+        return self.value
 
 
 @dataclass()
@@ -40,20 +45,20 @@ class Placeholder(RequestField):
 
 def request_field(
     field_type: RequestFieldType,
-    field_factory: Optional[RequestFieldFactory] = None,
+    field_factory: Optional[AnyValueFactory] = None,
     **pydantic_kwargs: Any,
-) -> Any:  # noqa: N802
+) -> Any:
     if field_factory is not None:
-        pydantic_kwargs.update(default=None)
+        pydantic_kwargs.setdefault("default", None)
+    data: dict[str, Any] = {"field_type": field_type, "field_factory": field_factory}
     return Field(
-        json_schema_extra={"field_type": field_type, "field_factory": field_factory},
+        json_schema_extra=data,
         **pydantic_kwargs,
     )  # type: ignore[pydantic-field]
 
 
-# noinspection DuplicatedCode
 def QueryField(  # noqa: N802
-    field_factory: Optional[RequestFieldFactory] = None,
+    field_factory: Optional[AnyValueFactory] = None,
     **pydantic_kwargs: Any,
 ) -> Any:
     return request_field(
@@ -64,7 +69,7 @@ def QueryField(  # noqa: N802
 
 
 def BodyField(  # noqa: N802
-    field_factory: Optional[RequestFieldFactory] = None,
+    field_factory: Optional[AnyValueFactory] = None,
     **pydantic_kwargs: Any,
 ) -> Any:
     return request_field(
@@ -74,9 +79,8 @@ def BodyField(  # noqa: N802
     )
 
 
-# noinspection DuplicatedCode
 def HeaderField(  # noqa: N802
-    field_factory: Optional[RequestFieldFactory] = None,
+    field_factory: Optional[AnyValueFactory] = None,
     **pydantic_kwargs: Any,
 ) -> Any:
     return request_field(
@@ -87,7 +91,7 @@ def HeaderField(  # noqa: N802
 
 
 def PlaceholderField(  # noqa: N802
-    field_factory: Optional[RequestFieldFactory] = None,
+    field_factory: Optional[AnyValueFactory] = None,
     **pydantic_kwargs: Any,
 ) -> Any:
     return request_field(

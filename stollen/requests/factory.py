@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Iterable, TypeAlias
+from typing import Any, Callable, Iterable, Optional, Union
+
+from typing_extensions import TypeAlias
 
 from ..client import Stollen
 from ..method import StollenMethod
@@ -9,7 +11,12 @@ from .fields import RequestField
 
 RequestFieldFactory: TypeAlias = Callable[
     [Stollen, StollenMethod[Any, Stollen]],
-    RequestField | Iterable[RequestField],
+    Optional[Union[RequestField, Iterable[RequestField]]],
+]
+
+AnyValueFactory: TypeAlias = Callable[
+    [Stollen, StollenMethod[Any, Stollen]],
+    Any,
 ]
 
 
@@ -19,5 +26,5 @@ class BaseRequestFieldFactory(ABC):
         self,
         client: Stollen,
         method: StollenMethod[Any, Stollen],
-    ) -> Iterable[RequestField] | RequestField:
+    ) -> Union[Iterable[RequestField], RequestField]:
         pass

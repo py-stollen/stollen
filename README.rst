@@ -3,7 +3,33 @@
 stollen
 #######
 
-**stollen** is an asynchronous framework to easily build a client-side API.
+.. image:: https://img.shields.io/pypi/l/stollen.svg?style=flat-square
+    :target: https://opensource.org/licenses/MIT
+    :alt: MIT License
+
+.. image:: https://img.shields.io/pypi/status/stollen.svg?style=flat-square
+    :target: https://pypi.python.org/pypi/stollen
+    :alt: PyPi status
+
+.. image:: https://img.shields.io/pypi/v/stollen.svg?style=flat-square
+    :target: https://pypi.python.org/pypi/stollen
+    :alt: PyPi Package Version
+
+.. image:: https://img.shields.io/pypi/dm/stollen.svg?style=flat-square
+    :target: https://pypistats.org/packages/stollen
+    :alt: Downloads
+
+.. image:: https://img.shields.io/pypi/pyversions/stollen.svg?style=flat-square
+    :target: https://pypi.python.org/pypi/stollen
+    :alt: Supported python versions
+
+**Stollen** is an asynchronous framework designed to streamline the process
+of building API clients, written in Python 3.9+ using
+`aiohttp <https://github.com/aio-libs/aiohttp>`_ and
+`pydantic <https://docs.pydantic.dev/latest/>`_.
+With a declarative approach, Stollen allows developers
+to define API methods, handle responses, and manage errors
+in a structured way, focusing on clarity and scalability.
 
 Installation
 ------------

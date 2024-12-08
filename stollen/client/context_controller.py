@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from typing import Any, Generic, Optional, Self
+from typing import Any, Generic, Optional
 
 from pydantic import BaseModel, PrivateAttr
+from typing_extensions import Self
 
 from .client import StollenClientT
 

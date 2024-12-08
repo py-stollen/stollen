@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 name = "stollen"
 description = "An asynchronous framework to easily build a client-side API"
 readme = "README.rst"
-requires-python = ">=3.11"
+requires-python = ">=3.9"
 license = "MIT"
 authors = [
     { name = "wakaree", email = "nullmatawasoradesu@gmail.com" },
@@ -22,9 +22,11 @@ keywords = [
     "client",
 ]
 dependencies = [
-    "aiohttp~=3.9.0",
-    "certifi==2023.11.17",
-    "pydantic>=2.4.1,<2.9",
+    "aiohttp>=3.9.0,<3.11",
+    "pydantic>=2.4.1,<2.10",
+    "aiofiles>=23.2.1,<24.2",
+    "certifi>=2023.7.22",
+    "typing-extensions>=4.7.0,<=5.0",
 ]
 classifiers = [
     "License :: OSI Approved :: MIT License",
@@ -32,6 +34,8 @@ classifiers = [
     "Environment :: Console",
     "Framework :: AsyncIO",
     "Typing :: Typed",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Topic :: Software Development :: Libraries :: Python Modules",
@@ -43,10 +47,14 @@ path = "stollen/__meta__.py"
 
 [project.optional-dependencies]
 dev = [
-    "black~=24.8.0",
-    "ruff~=0.6.1",
-    "mypy~=1.11.1",
-    "pre-commit~=3.8.0"
+    "black~=24.10.0",
+    "ruff~=0.6.0",
+    "mypy~=1.10.0",
+    "pre-commit~=3.6",
+    "types-aiofiles>=24.1.0.20240626",
+]
+proxy = [
+    "aiohttp-socks>=0.8,<0.10",
 ]
 
 [project.urls]
@@ -66,7 +74,6 @@ exclude = '''
   | dist
 )
 '''
-
 
 [tool.ruff]
 target-version = "py38"
@@ -103,7 +110,6 @@ exclude = [
     "scripts",
     "*.egg-info",
 ]
-
 
 [tool.mypy]
 plugins = ["pydantic.mypy"]

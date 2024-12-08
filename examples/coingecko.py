@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from typing import Any
 
 from stollen import Stollen, StollenMethod, StollenObject
 from stollen.enums import HTTPMethod
@@ -17,13 +18,14 @@ class RateLimitError(CoingeckoAPIError):
 
 
 class Coingecko(Stollen):
-    def __init__(self) -> None:
+    def __init__(self, **stollen_kwargs: Any) -> None:
         super().__init__(
             base_url="https://api.coingecko.com/api/v3",
             error_message_key=["status", "error_message"],
             general_error_class=CoingeckoAPIError,
             error_codes={429: RateLimitError},
             stringify_detailed_errors=False,
+            **stollen_kwargs,
         )
 
     async def ping(self) -> GeckoSays:

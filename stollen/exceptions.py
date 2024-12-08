@@ -1,7 +1,7 @@
-import json
 from typing import Any
 
-from .requests.types import StollenRequest, StollenResponse
+from .requests import StollenRequest, StollenResponse
+from .utils.text import serialize_model
 
 
 class StollenError(Exception):
@@ -49,28 +49,13 @@ class DetailedStollenAPIError(StollenError):
             message = f"{message}\nRequest data: {request}\nResponse data: {response}"
             super().__init__(message=message)
             return
-
-        request_data: str = "\n".join(
-            [
-                f"  {field}={json.dumps(value, indent=4)}"
-                for field, value in request.model_dump().items()
-            ]
-        )
-
-        response_data: str = "\n".join(
-            [
-                f"  {field}={json.dumps(value, indent=4)}"
-                for field, value in response.model_dump().items()
-            ]
-        )
-
         super().__init__(
             message=(
                 f"{message}\n"
                 f"Request data:\n"
-                f"{request_data}\n"
+                f"{serialize_model(request)}\n"
                 f"Response data:\n"
-                f"{response_data}"
+                f"{serialize_model(response)}"
             ),
             **kwargs,
         )

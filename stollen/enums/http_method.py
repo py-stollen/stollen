@@ -1,7 +1,7 @@
-from enum import StrEnum
+from enum import Enum
 
 
-class HTTPMethod(StrEnum):
+class HTTPMethod(str, Enum):
     HEAD = "HEAD"
     GET = "GET"
     DELETE = "DELETE"
