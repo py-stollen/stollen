@@ -6,7 +6,9 @@ from pydantic import BaseModel, ConfigDict, TypeAdapter
 
 from .client import StollenClientT
 from .client.context_controller import StollenContextController
+from .const import DEFAULT_CHUNK_SIZE
 from .enums import HTTPMethod, RequestFieldType
+from .requests import FileResponse
 from .types import StollenT
 
 if TYPE_CHECKING:
@@ -57,14 +59,18 @@ class StollenMethod(
             raise TypeError(msg)
         setattr(cls, name, var)
 
-    # noinspection PyMethodOverriding
-    def __init_subclass__(cls, **kwargs: Any) -> None:  # type: ignore
-        # Prevent class var validation for the Generic class
+    @classmethod
+    def __resolve_abstract(cls, kwargs: dict[str, Any]) -> None:
         cls.__abstract = kwargs.pop("abstract", None) or getattr(cls, "__abstract", False)
         mro: list[type[Any]] = list(cls.__mro__)
         parent: type[Any] = mro[mro.index(cls) + 1]
         if cls.__name__.startswith(f"{parent.__name__}[") and issubclass(parent, StollenMethod):
             cls.__abstract = parent.__abstract
+
+    # noinspection PyMethodOverriding
+    def __init_subclass__(cls, **kwargs: Any) -> None:  # type: ignore
+        cls.__resolve_abstract(kwargs)
+        # Prevent class var validation for the Generic class
         if not getattr(cls, "__parameters__", None):
             var_required: bool = not cls.__abstract
             cls.__validate_class_var(name="subdomain", kwargs=kwargs, required=False)
@@ -79,9 +85,25 @@ class StollenMethod(
             )
             if getattr(cls, "returning", None):
                 cls.type_adapter = TypeAdapter[StollenT](cls.returning)
+            # Set extra class vars if needed
+            for name in kwargs.copy():
+                if name in cls.__class_vars__:
+                    setattr(cls, name, kwargs.pop(name))
         super().__init_subclass__(**kwargs)
 
     model_config = ConfigDict(
         validate_assignment=True,
         arbitrary_types_allowed=True,
     )
+
+
+class StollenStreamingMethod(
+    StollenMethod[FileResponse, StollenClientT],
+    returning=FileResponse,
+    abstract=True,
+):
+    """
+    Abstract class for methods with streaming response
+    """
+
+    chunk_size: ClassVar[int] = DEFAULT_CHUNK_SIZE

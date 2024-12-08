@@ -2,13 +2,13 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from types import TracebackType
-from typing import TYPE_CHECKING, Any, AsyncGenerator, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 from pydantic import TypeAdapter, ValidationError
 from typing_extensions import Self
 
 from .. import loggers
-from ..const import DEFAULT_CHUNK_SIZE, DEFAULT_REQUEST_TIMEOUT
+from ..const import DEFAULT_REQUEST_TIMEOUT
 from ..exceptions import DetailedStollenAPIError, StollenError
 from ..requests.serializer import RequestSerializer
 from ..requests.types import StollenRequest, StollenResponse
@@ -59,17 +59,6 @@ class BaseSession(ABC):
         request_timeout: Optional[int] = None,
     ) -> tuple[StollenResponse, Any]:
         pass
-
-    @abstractmethod
-    async def stream_content(
-        self,
-        url: str,
-        headers: Optional[dict[str, Any]] = None,
-        timeout: int = DEFAULT_REQUEST_TIMEOUT,
-        chunk_size: int = DEFAULT_CHUNK_SIZE,
-        raise_for_status: bool = True,
-    ) -> AsyncGenerator[bytes, None]:
-        yield b""
 
     @classmethod
     def prepare_response(

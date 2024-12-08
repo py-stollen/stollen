@@ -10,15 +10,16 @@ from .fields import (
     RequestField,
     request_field,
 )
-from .input_file import BufferedInputFile, FSInputFile, InputFile, URLInputFile
+from .input_file import BufferedInputFile, FSInputFile, InputFile
 from .serializer import RequestSerializer
-from .types import StollenRequest, StollenResponse
+from .types import FileResponse, StollenRequest, StollenResponse
 
 __all__ = [
     "Body",
     "BodyField",
     "BufferedInputFile",
     "FSInputFile",
+    "FileResponse",
     "Header",
     "HeaderField",
     "InputFile",
@@ -30,6 +31,5 @@ __all__ = [
     "RequestSerializer",
     "StollenRequest",
     "StollenResponse",
-    "URLInputFile",
     "request_field",
 ]

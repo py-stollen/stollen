@@ -2,13 +2,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Optional, Union
 
-from aiogram.types import LinkPreviewOptions
-
 from stollen import Stollen
 from stollen.requests import InputFile, Placeholder
 
 if TYPE_CHECKING:
-    from .types import Message
+    from .types import LinkPreviewOptions, Message
 
 
 class TelegramBot(Stollen):

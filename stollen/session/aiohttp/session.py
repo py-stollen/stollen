@@ -1,14 +1,15 @@
 from __future__ import annotations
 
 import asyncio
+from io import BytesIO
 from ssl import create_default_context
-from typing import TYPE_CHECKING, Any, AsyncGenerator, Optional, cast
+from typing import TYPE_CHECKING, Any, Optional, cast
 
 import certifi
-from aiohttp import ClientResponse, ClientSession, FormData, TCPConnector, hdrs
+from aiohttp import ClientResponse, ClientSession, FormData, TCPConnector
 
-from ...const import DEFAULT_CHUNK_SIZE, DEFAULT_REQUEST_TIMEOUT
-from ...requests import InputFile, RequestSerializer, StollenRequest, StollenResponse
+from ...const import DEFAULT_REQUEST_TIMEOUT
+from ...requests import FileResponse, InputFile, RequestSerializer, StollenRequest, StollenResponse
 from ..base import BaseSession
 from .proxy import ProxyType, prepare_connector
 
@@ -132,9 +133,22 @@ class AiohttpSession(BaseSession):
             **body_kwargs,
         )
 
-        body: Any = await response.text()
-        if response.headers.get(hdrs.CONTENT_TYPE, "").startswith("application/json"):
-            body = self.serializer.json_loads(body)
+        if not request.stream_content:
+            if response.content_type.startswith("application/json"):
+                body = await response.json(loads=self.serializer.json_loads)
+            else:
+                body = await response.text()
+        else:
+            buffer: BytesIO = BytesIO()
+            async for chunk in response.content.iter_chunked(cast(int, request.stream_chunk_size)):
+                # noinspection PyTypeChecker
+                buffer.write(chunk)
+            buffer.seek(0)
+            body = FileResponse(
+                file=buffer,
+                size=response.content_length,
+                content_type=response.content_type,
+            )
 
         raw_response: StollenResponse = StollenResponse(
             status_code=response.status,
@@ -147,24 +161,3 @@ class AiohttpSession(BaseSession):
             request=request,
             response=raw_response,
         )
-
-    async def stream_content(
-        self,
-        url: str,
-        headers: Optional[dict[str, Any]] = None,
-        timeout: int = DEFAULT_REQUEST_TIMEOUT,
-        chunk_size: int = DEFAULT_CHUNK_SIZE,
-        raise_for_status: bool = True,
-    ) -> AsyncGenerator[bytes, None]:
-        if headers is None:
-            headers = {}
-
-        session: ClientSession = await self.get_session()
-        async with session.get(
-            url=url,
-            timeout=timeout,
-            headers=headers,
-            raise_for_status=raise_for_status,
-        ) as resp:
-            async for chunk in resp.content.iter_chunked(chunk_size):
-                yield chunk

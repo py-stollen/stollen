@@ -8,10 +8,12 @@ from pydantic import BaseModel, RootModel
 # noinspection PyProtectedMember
 from pydantic.fields import FieldInfo
 
+from ..const import DEFAULT_CHUNK_SIZE
 from ..enums import RequestFieldType
 from ..requests.fields import RequestField
 from ..requests.input_file import InputFile
 from ..requests.types import StollenRequest
+from .types import FileResponse
 
 if TYPE_CHECKING:
     from ..client import Stollen, StollenClientT
@@ -182,6 +184,15 @@ class RequestSerializer:
             payload=payload,
         )
 
+        try:
+            stream_content: bool = issubclass(method.returning, FileResponse)
+            stream_chunk_size: Optional[int] = (
+                getattr(method, "chunk_size", DEFAULT_CHUNK_SIZE) if stream_content else None
+            )
+        except TypeError:
+            stream_content = False
+            stream_chunk_size = None
+
         return StollenRequest(
             url=url,
             http_method=method.http_method,
@@ -190,4 +201,6 @@ class RequestSerializer:
             query=payload.pop(RequestFieldType.QUERY, {}),
             body=payload.pop(RequestFieldType.BODY, {}),
             files=payload.pop(RequestFieldType.FILE, {}),
+            stream_content=stream_content,
+            stream_chunk_size=stream_chunk_size,
         )

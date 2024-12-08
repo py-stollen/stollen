@@ -4,11 +4,11 @@ import io
 import os
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, AsyncGenerator, Dict, Optional, Union
+from typing import TYPE_CHECKING, AsyncGenerator, Optional, Union
 
 import aiofiles
 
-from ..const import DEFAULT_CHUNK_SIZE, DEFAULT_REQUEST_TIMEOUT
+from ..const import DEFAULT_CHUNK_SIZE
 
 if TYPE_CHECKING:
     from ..client import Stollen
@@ -38,7 +38,6 @@ class BufferedInputFile(InputFile):
         :param chunk_size: Uploading chunk size
         """
         super().__init__(filename=filename, chunk_size=chunk_size)
-
         self.data = file
 
     @classmethod
@@ -93,33 +92,3 @@ class FSInputFile(InputFile):
         async with aiofiles.open(self.path, "rb") as f:
             while chunk := await f.read(self.chunk_size):
                 yield chunk
-
-
-class URLInputFile(InputFile):
-    def __init__(
-        self,
-        url: str,
-        headers: Optional[Dict[str, Any]] = None,
-        filename: Optional[str] = None,
-        chunk_size: int = DEFAULT_CHUNK_SIZE,
-        timeout: int = DEFAULT_REQUEST_TIMEOUT,
-        client: Optional[Stollen] = None,
-    ) -> None:
-        super().__init__(filename=filename, chunk_size=chunk_size)
-        if headers is None:
-            headers = {}
-        self.url = url
-        self.headers = headers
-        self.timeout = timeout
-        self.client = client
-
-    async def read(self, client: Stollen) -> AsyncGenerator[bytes, None]:
-        client = self.client or client
-        async for chunk in client.session.stream_content(
-            url=self.url,
-            headers=self.headers,
-            timeout=self.timeout,
-            chunk_size=self.chunk_size,
-            raise_for_status=True,
-        ):
-            yield chunk
