@@ -29,9 +29,10 @@ def log_request(
     start_time: float,
 ) -> None:
     loggers.client.debug(
-        "%s request to the endpoint %s has been made with status code %d (duration: %d ms)",
+        "HTTP Request: %s %s (ok=%s, status_code=%d, duration=%dms)",
         request.http_method,
         request.url,
+        response.status_code < 400,
         response.status_code,
         (loop.time() - start_time) * 1000,
     )
@@ -123,12 +124,6 @@ class BaseSession(ABC):
         request_timeout: Optional[int] = None,
     ) -> StollenT:
         request: StollenRequest = self.serializer.to_request(client=client, method=method)
-        loggers.client.debug(
-            "Making %s request to the endpoint %s",
-            request.http_method,
-            request.url,
-        )
-
         loop: AbstractEventLoop = asyncio.get_running_loop()
         start_time: float = loop.time()
 
