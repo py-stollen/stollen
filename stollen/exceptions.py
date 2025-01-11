@@ -33,7 +33,7 @@ class StollenAPIError(StollenError):
         return f"[{self.response.status_code}] {self.message}"
 
 
-class DetailedStollenAPIError(StollenError):
+class DetailedStollenAPIError(StollenAPIError):
     def __init__(
         self,
         *,
@@ -43,19 +43,16 @@ class DetailedStollenAPIError(StollenError):
         stringify: bool = True,
         **kwargs: Any,
     ) -> None:
-        self.request = request
-        self.response = response
-        if not stringify:
-            message = f"{message}\nRequest data: {request}\nResponse data: {response}"
-            super().__init__(message=message)
-            return
-        super().__init__(
-            message=(
-                f"{message}\n"
-                f"Request data:\n"
-                f"{serialize_model(request)}\n"
-                f"Response data:\n"
-                f"{serialize_model(response)}"
-            ),
-            **kwargs,
+        self.stringify = stringify
+        super().__init__(message=message, request=request, response=response, **kwargs)
+
+    def __str__(self) -> str:
+        if not self.stringify:
+            return f"{self.message}\nRequest data: {self.request}\nResponse data: {self.response}"
+        return (
+            f"{self.message}\n"
+            f"Request data:\n"
+            f"{serialize_model(self.request)}\n"
+            f"Response data:\n"
+            f"{serialize_model(self.response)}"
         )
