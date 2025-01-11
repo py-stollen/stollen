@@ -11,7 +11,7 @@ from typing_extensions import Self
 
 from .. import loggers
 from ..const import DEFAULT_REQUEST_TIMEOUT
-from ..exceptions import DetailedStollenAPIError, StollenError
+from ..exceptions import DetailedStollenAPIError, StollenAPIError, StollenError
 from ..requests.serializer import RequestSerializer
 from ..requests.types import StollenRequest, StollenResponse
 from ..utils.mapping import recursive_getitem
@@ -20,6 +20,21 @@ if TYPE_CHECKING:
     from ..client import Stollen, StollenClientT
     from ..method import StollenMethod
     from ..types import JsonDumps, JsonLoads, StollenT
+
+
+def log_request(
+    request: StollenRequest,
+    response: StollenResponse,
+    loop: AbstractEventLoop,
+    start_time: float,
+) -> None:
+    loggers.client.debug(
+        "%s request to the endpoint %s has been made with status code %d (duration: %d ms)",
+        request.http_method,
+        request.url,
+        response.status_code,
+        (loop.time() - start_time) * 1000,
+    )
 
 
 class BaseSession(ABC):
@@ -117,19 +132,22 @@ class BaseSession(ABC):
         loop: AbstractEventLoop = asyncio.get_running_loop()
         start_time: float = loop.time()
 
-        response, data = await self.make_request(
-            client=client,
-            request=request,
-            request_timeout=request_timeout,
-        )
+        try:
+            response, data = await self.make_request(
+                client=client,
+                request=request,
+                request_timeout=request_timeout,
+            )
+        except StollenAPIError as error:
+            log_request(
+                request=request,
+                response=error.response,
+                loop=loop,
+                start_time=start_time,
+            )
+            raise
 
-        loggers.client.debug(
-            "%s request to the endpoint %s has been made with status code %d (duration: %d ms)",
-            request.http_method,
-            request.url,
-            response.status_code,
-            (loop.time() - start_time) * 1000,
-        )
+        log_request(request=request, response=response, loop=loop, start_time=start_time)
         adapter: TypeAdapter[StollenT] = method.type_adapter
         try:
             return adapter.validate_python(data, context={"client": client})

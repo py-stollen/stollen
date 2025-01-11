@@ -21,6 +21,7 @@ class TelegramBot(Stollen):
         super().__init__(
             base_url="https://api.telegram.org/bot{token}",
             response_data_key=["result"],
+            error_message_key=["description"],
             global_request_fields=[Placeholder(name="token", value=token)],
             **stollen_kwargs,
         )
