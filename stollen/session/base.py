@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import asyncio
 from abc import ABC, abstractmethod
+from asyncio import AbstractEventLoop
 from types import TracebackType
 from typing import TYPE_CHECKING, Any, Optional
 
@@ -111,16 +113,22 @@ class BaseSession(ABC):
             request.http_method,
             request.url,
         )
+
+        loop: AbstractEventLoop = asyncio.get_running_loop()
+        start_time: float = loop.time()
+
         response, data = await self.make_request(
             client=client,
             request=request,
             request_timeout=request_timeout,
         )
+
         loggers.client.debug(
-            "%s request to the endpoint %s has been made with status code %d",
+            "%s request to the endpoint %s has been made with status code %d (duration: %d ms)",
             request.http_method,
             request.url,
             response.status_code,
+            (loop.time() - start_time) * 1000,
         )
         adapter: TypeAdapter[StollenT] = method.type_adapter
         try:
