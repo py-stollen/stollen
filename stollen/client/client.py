@@ -27,6 +27,7 @@ class Stollen:
     error_codes: dict[int, type[StollenError]]
     force_detailed_errors: bool
     stringify_detailed_errors: bool
+    echo_requests: bool
 
     def __init__(
         self,
@@ -41,6 +42,7 @@ class Stollen:
         error_codes: Optional[dict[int, type[StollenError]]] = None,
         force_detailed_errors: bool = False,
         stringify_detailed_errors: bool = True,
+        echo_requests: bool = True,
     ) -> None:
         if session is None:
             session = AiohttpSession()
@@ -54,6 +56,7 @@ class Stollen:
         self.error_codes = error_codes or {}
         self.force_detailed_errors = force_detailed_errors
         self.stringify_detailed_errors = stringify_detailed_errors
+        self.echo_requests = echo_requests
 
     def stollen_get_subdomain(
         self,

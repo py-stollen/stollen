@@ -22,13 +22,21 @@ if TYPE_CHECKING:
     from ..types import JsonDumps, JsonLoads, StollenT
 
 
+def pre_log_request(request: StollenRequest) -> None:
+    loggers.client.info(
+        "Pending HTTP Request: %s %s",
+        request.http_method,
+        request.url,
+    )
+
+
 def log_request(
     request: StollenRequest,
     response: StollenResponse,
     loop: AbstractEventLoop,
     start_time: float,
 ) -> None:
-    loggers.client.debug(
+    args: tuple[Any, ...] = (
         "HTTP Request: %s %s (ok=%s, status_code=%d, duration=%dms)",
         request.http_method,
         request.url,
@@ -36,6 +44,11 @@ def log_request(
         response.status_code,
         (loop.time() - start_time) * 1000,
     )
+
+    if response.status_code < 400:
+        loggers.client.info(*args)
+    else:
+        loggers.client.error(*args)
 
 
 class BaseSession(ABC):
@@ -128,21 +141,25 @@ class BaseSession(ABC):
         start_time: float = loop.time()
 
         try:
+            if client.echo_requests:
+                pre_log_request(request=request)
             response, data = await self.make_request(
                 client=client,
                 request=request,
                 request_timeout=request_timeout,
             )
         except StollenAPIError as error:
-            log_request(
-                request=request,
-                response=error.response,
-                loop=loop,
-                start_time=start_time,
-            )
+            if client.echo_requests:
+                log_request(
+                    request=request,
+                    response=error.response,
+                    loop=loop,
+                    start_time=start_time,
+                )
             raise
 
-        log_request(request=request, response=response, loop=loop, start_time=start_time)
+        if client.echo_requests:
+            log_request(request=request, response=response, loop=loop, start_time=start_time)
         adapter: TypeAdapter[StollenT] = method.type_adapter
         try:
             return adapter.validate_python(data, context={"client": client})
