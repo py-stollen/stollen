@@ -1,3 +1,4 @@
+import json
 from typing import Any
 
 from .requests import StollenRequest, StollenResponse
@@ -48,7 +49,14 @@ class DetailedStollenAPIError(StollenAPIError):
 
     def __str__(self) -> str:
         if not self.stringify:
-            return f"{self.message}\nRequest data: {self.request}\nResponse data: {self.response}"
+            return json.dumps(
+                {
+                    "request": self.request.model_dump(),
+                    "response": self.response.model_dump(),
+                },
+                default=str,
+                ensure_ascii=False,
+            )
         return (
             f"{self.message}\n"
             f"Request data:\n"
