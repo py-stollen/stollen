@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Iterable, Optional, TypeVar, Union
 from typing_extensions import Self
 
 from ..exceptions import StollenAPIError, StollenError
+from ..requests import StollenRequest, StollenResponse
 from ..session.aiohttp import AiohttpSession
 
 if TYPE_CHECKING:
@@ -74,6 +75,18 @@ class Stollen:
             method=method,
             request_timeout=request_timeout,
         )
+
+    async def raw_request(
+        self,
+        request: StollenRequest,
+        request_timeout: Optional[int] = None,
+    ) -> StollenResponse:
+        response, data = await self.session.raw_request(
+            client=self,
+            request=request,
+            request_timeout=request_timeout,
+        )
+        return response
 
     async def __aenter__(self) -> Self:
         return self

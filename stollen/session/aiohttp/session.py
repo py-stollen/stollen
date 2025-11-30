@@ -128,8 +128,7 @@ class AiohttpSession(BaseSession):
             url=request.url,
             headers=request.headers,
             params=request.query,
-            verify_ssl=False,
-            timeout=request_timeout or self.timeout,
+            timeout=request_timeout or self.timeout,  # type: ignore[arg-type]
             **body_kwargs,
         )
 

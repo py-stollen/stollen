@@ -54,7 +54,7 @@ def request_field(
     return Field(
         json_schema_extra=data,
         **pydantic_kwargs,
-    )  # type: ignore[pydantic-field]
+    )
 
 
 def QueryField(  # noqa: N802

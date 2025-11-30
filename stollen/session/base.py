@@ -130,13 +130,12 @@ class BaseSession(ABC):
                 stringify=client.stringify_detailed_errors,
             )
 
-    async def __call__(
+    async def raw_request(
         self,
         client: Stollen,
-        method: StollenMethod[StollenT, StollenClientT],
+        request: StollenRequest,
         request_timeout: Optional[int] = None,
-    ) -> StollenT:
-        request: StollenRequest = self.serializer.to_request(client=client, method=method)
+    ) -> tuple[StollenResponse, Any]:
         loop: AbstractEventLoop = asyncio.get_running_loop()
         start_time: float = loop.time()
 
@@ -160,6 +159,22 @@ class BaseSession(ABC):
 
         if client.echo_requests:
             log_request(request=request, response=response, loop=loop, start_time=start_time)
+
+        return response, data
+
+    async def __call__(
+        self,
+        client: Stollen,
+        method: StollenMethod[StollenT, StollenClientT],
+        request_timeout: Optional[int] = None,
+    ) -> StollenT:
+        request: StollenRequest = self.serializer.to_request(client=client, method=method)
+        response, data = await self.raw_request(
+            client=client,
+            request=request,
+            request_timeout=request_timeout,
+        )
+
         adapter: TypeAdapter[StollenT] = method.type_adapter
         try:
             return adapter.validate_python(data, context={"client": client})
