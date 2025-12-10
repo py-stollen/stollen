@@ -92,25 +92,35 @@ class BaseSession(ABC):
         pass
 
     @classmethod
+    def get_exc_type(cls, client: StollenClientT, response: StollenResponse) -> type[StollenError]:
+        return (
+            client.error_codes.get(
+                response.status_code,
+                client.general_error_class,
+            )
+            if not client.force_detailed_errors
+            else DetailedStollenAPIError
+        )
+
+    @classmethod
     def prepare_response(
         cls,
         client: Stollen,
         request: StollenRequest,
         response: StollenResponse,
     ) -> Any:
+        for header in client.hide_headers:
+            if header not in response.headers:
+                continue
+            response.headers[header] = "********"
+
         try:
             if response.status_code not in client.error_codes and response.status_code < 400:
                 response_data_key: list[str] = client.response_data_key.copy()
                 response_data_key.extend(request.response_data_key)
                 return recursive_getitem(mapping=response.body, keys=response_data_key)
-            exception_type: type[StollenError] = (
-                client.error_codes.get(
-                    response.status_code,
-                    client.general_error_class,
-                )
-                if not client.force_detailed_errors
-                else DetailedStollenAPIError
-            )
+
+            exception_type: type[StollenError] = cls.get_exc_type(client, response)
             raise exception_type(
                 message=str(
                     recursive_getitem(
@@ -122,6 +132,7 @@ class BaseSession(ABC):
                 response=response,
                 stringify=client.stringify_detailed_errors,
             )
+
         except KeyError:
             raise DetailedStollenAPIError(
                 message="An error has occurred and stollen can't parse the response.",

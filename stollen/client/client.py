@@ -29,6 +29,7 @@ class Stollen:
     force_detailed_errors: bool
     stringify_detailed_errors: bool
     echo_requests: bool
+    hide_headers: list[str]
 
     def __init__(
         self,
@@ -44,6 +45,7 @@ class Stollen:
         force_detailed_errors: bool = False,
         stringify_detailed_errors: bool = True,
         echo_requests: bool = True,
+        hide_headers: Optional[list[str]] = None,
     ) -> None:
         if session is None:
             session = AiohttpSession()
@@ -58,6 +60,7 @@ class Stollen:
         self.force_detailed_errors = force_detailed_errors
         self.stringify_detailed_errors = stringify_detailed_errors
         self.echo_requests = echo_requests
+        self.hide_headers = hide_headers or []
 
     def stollen_get_subdomain(
         self,
